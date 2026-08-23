@@ -81,6 +81,7 @@
   .stat-pair > div { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
   .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
   .stat-value { font-size: 19px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
   .card h2 { margin: 0 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
@@ -203,7 +204,7 @@
         <div id="heroRunwayWrap"></div>
       </div>
       <div class="stat-pair">
-        <div><div class="stat-label">Fijos</div><div class="stat-value" id="sumFixed">$0.00</div></div>
+        <div><div class="stat-label">Fijos</div><div class="stat-value" id="sumFixed">$0.00</div><div class="stat-sub" id="sumFixedPct"></div></div>
         <div><div class="stat-label">Variables</div><div class="stat-value" id="sumVariable">$0.00</div></div>
       </div>
       <div class="card" id="upcomingCard" style="display:none;">
@@ -475,8 +476,10 @@
         runwayWrap.innerHTML = `<p class="hint">Agregá tus ingresos del mes tocando + para ver cuánto te queda.</p>`;
       }
 
-      document.getElementById('sumFixed').textContent = money(totalGastosFijos());
+      const fijos = totalGastosFijos();
+      document.getElementById('sumFixed').textContent = money(fijos);
       document.getElementById('sumVariable').textContent = money(totalGastosVariables());
+      document.getElementById('sumFixedPct').textContent = ingresos > 0 ? `${Math.round(fijos / ingresos * 100)}% de tus ingresos` : '';
 
       renderUpcoming();
 
