@@ -7,28 +7,25 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Gastos">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12100D">
 <style>
   :root {
-    --bg: #f2f2f7;
-    --card: #ffffff;
-    --text: #1c1c1e;
-    --muted: #8e8e93;
-    --border: #e5e5ea;
-    --accent: #007aff;
-    --ok: #34c759;
-    --warning: #ff9500;
-    --over: #ff3b30;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #000000;
-      --card: #1c1c1e;
-      --text: #f2f2f7;
-      --muted: #8e8e93;
-      --border: #38383a;
-      --accent: #0a84ff;
-    }
+    --bg: #12100D;
+    --surface: #1D1A15;
+    --surface-2: #262218;
+    --text: #F4EFE6;
+    --muted: #9A9284;
+    --border: rgba(244,239,230,0.10);
+    --accent: #C9A24B;
+    --accent-ink: #12100D;
+    --ok: #6FB98F;
+    --warning: #E08A3C;
+    --over: #D9614F;
+    --font-display: ui-serif, Georgia, "Times New Roman", serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
@@ -36,36 +33,62 @@
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-body);
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
   header.topbar {
+    display: flex; align-items: center; gap: 8px;
     padding: 12px 20px;
-    font-weight: 700;
-    font-size: 22px;
+    font-weight: 700; font-size: 20px;
     border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: env(safe-area-inset-top);
-    background: var(--bg);
-    z-index: 5;
+    position: sticky; top: env(safe-area-inset-top);
+    background: var(--bg); z-index: 5;
   }
-  main { padding: 12px 16px 90px; max-width: 560px; margin: 0 auto; }
+  .topbar-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--accent); color: var(--accent-ink);
+    font-family: var(--font-display); font-weight: 700; font-size: 16px;
+  }
+  main { padding: 16px 16px 96px; max-width: 560px; margin: 0 auto; }
   .tab { display: none; }
   .tab.active { display: block; }
-  .card {
-    background: var(--card);
-    border-radius: 14px;
-    padding: 14px 16px;
-    margin-bottom: 14px;
+
+  .hero {
+    background: linear-gradient(160deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 22px 20px; margin-bottom: 16px;
   }
-  .card h2 { margin: 0 0 10px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
-  .summary-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 16px; }
-  .summary-row.total { font-weight: 700; border-top: 1px solid var(--border); margin-top: 4px; padding-top: 10px; }
+  .hero-eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+  .hero-label { font-size: 14px; color: var(--muted); margin-top: 12px; }
+  .hero-amount {
+    font-family: var(--font-display); font-size: 42px; font-weight: 700;
+    line-height: 1.15; margin-top: 2px; font-variant-numeric: tabular-nums; color: var(--accent);
+  }
+  .hero-amount.level-warning { color: var(--warning); }
+  .hero-amount.level-over { color: var(--over); }
+  .hero-amount.level-empty { color: var(--muted); }
+  .runway { height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; margin-top: 18px; }
+  .runway-fill { height: 100%; border-radius: 6px; }
+  .runway-fill.level-ok { background: var(--ok); }
+  .runway-fill.level-warning { background: var(--warning); }
+  .runway-fill.level-over { background: var(--over); }
+  .runway-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 16px; line-height: 1.5; }
+
+  .stat-pair { display: flex; gap: 12px; margin-bottom: 16px; }
+  .stat-pair > div { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+  .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-value { font-size: 19px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+
   .progress-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
   .progress-row:last-child { border-bottom: none; }
   .progress-head { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 6px; }
-  .progress-track { height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+  .progress-track { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 3px; }
   .level-ok { color: var(--ok); }
   .level-warning { color: var(--warning); }
@@ -73,89 +96,136 @@
   .progress-fill.level-ok { background: var(--ok); }
   .progress-fill.level-warning { background: var(--warning); }
   .progress-fill.level-over { background: var(--over); }
-  .empty { color: var(--muted); text-align: center; padding: 24px 8px; font-size: 15px; }
+  .progress-fill.level-none { background: var(--muted); opacity: 0.5; }
+  .empty { color: var(--muted); text-align: center; padding: 28px 8px; font-size: 15px; line-height: 1.5; }
 
-  .segmented { display: flex; background: var(--border); border-radius: 10px; padding: 3px; margin-bottom: 14px; }
+  .upcoming-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .upcoming-row:last-child { border-bottom: none; }
+  .upcoming-when { color: var(--muted); font-size: 13px; }
+
+  .segmented { display: flex; background: var(--surface-2); border-radius: 10px; padding: 3px; margin-bottom: 14px; }
   .segmented button {
     flex: 1; border: none; background: transparent; padding: 8px; border-radius: 8px;
-    font-size: 14px; font-weight: 600; color: var(--text);
+    font-size: 14px; font-weight: 600; color: var(--muted); font-family: inherit;
   }
-  .segmented button.active { background: var(--card); }
+  .segmented button.active { background: var(--surface); color: var(--text); }
 
-  .list-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .section-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
+  .section-label:first-child { margin-top: 4px; }
+
+  .list-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
   .list-row:last-child { border-bottom: none; }
   .row-main { flex: 1; min-width: 0; }
   .row-main > div:first-child { font-size: 16px; }
-  .row-sub { font-size: 13px; color: var(--muted); }
-  .row-amount { font-variant-numeric: tabular-nums; font-size: 16px; white-space: nowrap; }
+  .row-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .row-amount { font-variant-numeric: tabular-nums; font-size: 16px; white-space: nowrap; color: var(--text); }
+  .row-amount.sign-in { color: var(--ok); }
   .row-delete { border: none; background: none; color: var(--muted); font-size: 16px; padding: 4px 6px; }
   .inline-input {
-    border: none; background: transparent; color: var(--muted); font-size: 13px; padding: 0;
-    width: 110px; font-family: inherit;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 13px; padding: 6px 8px;
+    width: 100px; font-family: inherit; border-radius: 8px; margin-top: 2px;
   }
-  .toggle input { width: 20px; height: 20px; }
+
+  .switch { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 100%; height: 100%; position: absolute; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; transition: background .15s; }
+  .switch span::before { content: ''; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: transform .15s; }
+  .switch input:checked + span { background: var(--ok); border-color: var(--ok); }
+  .switch input:checked + span::before { transform: translateX(18px); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .chip { border: 1px solid var(--border); background: var(--surface-2); color: var(--text); padding: 7px 12px; border-radius: 999px; font-size: 13px; font-family: inherit; }
+  .chip.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .chip-new { border-style: dashed; color: var(--muted); }
+
+  .row-toggle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .row-toggle > span:first-child { font-size: 14px; color: var(--text); }
+
+  .goal-card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+  .goal-name { font-size: 16px; font-weight: 600; padding-right: 28px; }
+  .goal-kind { display: inline-block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 3px 8px; border-radius: 999px; margin-top: 6px; font-weight: 600; }
+  .goal-kind.deuda { background: rgba(217,97,79,0.15); color: var(--over); }
+  .goal-kind.ahorro { background: rgba(111,185,143,0.15); color: var(--ok); }
+  .goal-track { height: 8px; border-radius: 5px; background: var(--surface-2); overflow: hidden; margin: 14px 0 10px; }
+  .goal-fill { height: 100%; border-radius: 5px; }
+  .goal-fill.deuda { background: var(--over); }
+  .goal-fill.ahorro { background: var(--ok); }
+  .goal-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .goal-actions { margin-top: 14px; display: flex; justify-content: flex-end; }
+  .btn-small { padding: 8px 14px; border-radius: 10px; border: none; background: var(--surface-2); color: var(--text); font-size: 13px; font-weight: 600; font-family: inherit; }
 
   .fab {
-    position: fixed; right: 20px; bottom: calc(70px + env(safe-area-inset-bottom));
-    width: 52px; height: 52px; border-radius: 50%; border: none;
-    background: var(--accent); color: white; font-size: 26px; line-height: 52px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
-    z-index: 6;
+    position: fixed; right: 20px; bottom: calc(78px + env(safe-area-inset-bottom));
+    width: 54px; height: 54px; border-radius: 50%; border: none;
+    background: var(--accent); color: var(--accent-ink); font-size: 28px; line-height: 54px; font-weight: 600;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4); z-index: 6;
   }
 
   nav.tabbar {
     position: fixed; left: 0; right: 0; bottom: 0;
-    display: flex; background: var(--card); border-top: 1px solid var(--border);
-    padding-bottom: env(safe-area-inset-bottom);
-    z-index: 5;
+    display: flex; background: var(--surface); border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom); z-index: 5;
   }
   nav.tabbar button {
-    flex: 1; border: none; background: none; padding: 10px 4px 8px; font-size: 11px; color: var(--muted);
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    border: none; background: none; padding: 10px 4px 8px; font-size: 11px; color: var(--muted); font-family: inherit;
   }
+  nav.tabbar button svg { width: 22px; height: 22px; }
   nav.tabbar button.active { color: var(--accent); font-weight: 600; }
 
-  dialog {
-    border: none; border-radius: 16px; padding: 0; width: min(420px, 92vw);
-    background: var(--card); color: var(--text);
-  }
-  dialog::backdrop { background: rgba(0,0,0,0.4); }
-  dialog form { padding: 20px; }
-  dialog h2 { margin: 0 0 16px; font-size: 18px; }
+  dialog { border: none; border-radius: 18px; padding: 0; width: min(420px, 92vw); background: var(--surface); color: var(--text); }
+  dialog::backdrop { background: rgba(0,0,0,0.55); }
+  dialog form { padding: 22px; max-height: 82vh; overflow-y: auto; }
+  dialog h2 { margin: 0 0 16px; font-size: 18px; font-family: var(--font-display); }
   dialog label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 14px; }
   dialog input, dialog select {
-    display: block; width: 100%; margin-top: 4px; padding: 10px; font-size: 16px;
-    border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text);
+    display: block; width: 100%; margin-top: 6px; padding: 11px; font-size: 16px;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text);
     font-family: inherit;
   }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
-  .dialog-actions button { padding: 10px 16px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; }
-  .btn-secondary { background: var(--border); color: var(--text); }
-  .btn-primary { background: var(--accent); color: white; }
+  .dialog-actions button { padding: 11px 16px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; font-family: inherit; }
+  .btn-secondary { background: var(--surface-2); color: var(--text); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
 </style>
 </head>
 <body>
-  <header class="topbar" id="topTitle">Resumen</header>
+  <header class="topbar"><span class="topbar-mark">$</span><span id="topTitle">Resumen</span></header>
 
   <main>
     <section id="tab-resumen" class="tab active">
-      <div class="card">
-        <h2>Este mes</h2>
-        <div class="summary-row"><span>Gastos fijos</span><span id="sumFixed">$0.00</span></div>
-        <div class="summary-row"><span>Gastos variables</span><span id="sumVariable">$0.00</span></div>
-        <div class="summary-row total"><span>Total</span><span id="sumTotal">$0.00</span></div>
+      <div class="hero">
+        <div class="hero-eyebrow" id="heroMonth"></div>
+        <div class="hero-label">Te queda</div>
+        <div class="hero-amount" id="heroAmount">$0.00</div>
+        <div id="heroRunwayWrap"></div>
+      </div>
+      <div class="stat-pair">
+        <div><div class="stat-label">Fijos</div><div class="stat-value" id="sumFixed">$0.00</div></div>
+        <div><div class="stat-label">Variables</div><div class="stat-value" id="sumVariable">$0.00</div></div>
+      </div>
+      <div class="card" id="upcomingCard" style="display:none;">
+        <h2>Próximos pagos</h2>
+        <div id="upcomingList"></div>
       </div>
       <div class="card">
-        <h2>Categorías (variable vs. límite)</h2>
+        <h2>Categorías</h2>
         <div id="categoryProgress"></div>
       </div>
     </section>
 
-    <section id="tab-gastos" class="tab">
-      <div class="segmented">
-        <button id="btnKindFixed" class="active">Fijos</button>
-        <button id="btnKindVariable">Variables</button>
+    <section id="tab-movimientos" class="tab">
+      <div class="segmented" id="movementFilters">
+        <button data-filter="todos" class="active">Todos</button>
+        <button data-filter="ingreso">Ingresos</button>
+        <button data-filter="gasto">Gastos</button>
       </div>
-      <div class="card" id="expenseList"></div>
+      <div id="movementList"></div>
+    </section>
+
+    <section id="tab-metas" class="tab">
+      <div id="goalList"></div>
+      <p class="empty" id="goalEmpty" style="display:none;">Sin metas todavía. Agregá una deuda para pagar o una meta de ahorro con el botón +.</p>
     </section>
 
     <section id="tab-categorias" class="tab">
@@ -166,44 +236,57 @@
   <button class="fab" id="btnAdd" aria-label="Agregar">+</button>
 
   <nav class="tabbar">
-    <button data-tab="resumen" class="active">Resumen</button>
-    <button data-tab="gastos">Gastos</button>
-    <button data-tab="categorias">Categorías</button>
+    <button data-tab="resumen" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 16a8 8 0 0 1 16 0"/><path d="M12 16 15 11"/><circle cx="12" cy="16" r="1.2" fill="currentColor" stroke="none"/></svg>
+      Resumen
+    </button>
+    <button data-tab="movimientos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v16l-2.5-1.5L13 20l-2.5-1.5L8 20l-2-1.5V4Z"/><path d="M9 9h6M9 13h6"/></svg>
+      Movimientos
+    </button>
+    <button data-tab="metas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4 3 4H5"/></svg>
+      Metas
+    </button>
+    <button data-tab="categorias">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 3H5a1 1 0 0 0-1 1v7.5a1 1 0 0 0 .3.7l9 9a1 1 0 0 0 1.4 0l7.5-7.5a1 1 0 0 0 0-1.4l-9-9a1 1 0 0 0-.7-.3Z"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+      Categorías
+    </button>
   </nav>
 
-  <dialog id="dlgFixed">
-    <form id="formFixed">
-      <h2>Nuevo gasto fijo</h2>
-      <label>Nombre
-        <input required id="fixedName" type="text" placeholder="Arriendo">
-      </label>
-      <label>Monto mensual
-        <input required id="fixedAmount" type="number" inputmode="decimal" step="0.01" min="0">
-      </label>
-      <label>Categoría
-        <select id="fixedCategory"><option value="">Ninguna</option></select>
-      </label>
-      <div class="dialog-actions">
-        <button type="button" class="btn-secondary" data-close>Cancelar</button>
-        <button type="submit" class="btn-primary">Guardar</button>
+  <dialog id="dlgMovement">
+    <form id="formMovement">
+      <h2>Nuevo movimiento</h2>
+      <div class="segmented" id="kindToggle">
+        <button type="button" data-kind="gasto" class="active">Gasto</button>
+        <button type="button" data-kind="ingreso">Ingreso</button>
       </div>
-    </form>
-  </dialog>
-
-  <dialog id="dlgVariable">
-    <form id="formVariable">
-      <h2>Nuevo gasto variable</h2>
       <label>Nombre
-        <input required id="variableName" type="text" placeholder="Supermercado">
+        <input required id="movName" type="text" placeholder="Ej. Supermercado">
       </label>
       <label>Monto
-        <input required id="variableAmount" type="number" inputmode="decimal" step="0.01" min="0">
+        <input required id="movAmount" type="number" inputmode="decimal" step="0.01" min="0.01">
       </label>
-      <label>Fecha
-        <input required id="variableDate" type="date">
+      <label class="row-toggle">
+        <span>Se repite</span>
+        <label class="switch"><input type="checkbox" id="movRecurring"><span></span></label>
       </label>
-      <label>Categoría
-        <select id="variableCategory"><option value="">Ninguna</option></select>
+      <div id="movRecurringOptions" style="display:none;">
+        <label>Frecuencia
+          <div class="segmented" id="movFrequencyToggle">
+            <button type="button" data-freq="monthly" class="active">Mensual</button>
+            <button type="button" data-freq="weekly">Semanal</button>
+          </div>
+        </label>
+        <label>Día de vencimiento (opcional)
+          <select id="movDueDay"></select>
+        </label>
+      </div>
+      <label id="movDateWrap">Fecha
+        <input id="movDate" type="date">
+      </label>
+      <label>Categoría (opcional)
+        <div class="chips" id="movCategoryChips"></div>
       </label>
       <div class="dialog-actions">
         <button type="button" class="btn-secondary" data-close>Cancelar</button>
@@ -221,9 +304,46 @@
       <label>Límite mensual (opcional)
         <input id="categoryLimit" type="number" inputmode="decimal" step="0.01" min="0">
       </label>
+      <p class="hint" id="categoryError" style="display:none; color: var(--over);">Ya existe una categoría con ese nombre.</p>
       <div class="dialog-actions">
         <button type="button" class="btn-secondary" data-close>Cancelar</button>
         <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgGoal">
+    <form id="formGoal">
+      <h2>Nueva meta</h2>
+      <div class="segmented" id="goalKindToggle">
+        <button type="button" data-kind="deuda" class="active">Deuda</button>
+        <button type="button" data-kind="ahorro">Ahorro</button>
+      </div>
+      <label>Nombre
+        <input required id="goalName" type="text" placeholder="Ej. Tarjeta de crédito">
+      </label>
+      <label><span id="goalTargetText">Monto total a pagar</span>
+        <input required id="goalTarget" type="number" inputmode="decimal" step="0.01" min="0.01">
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn-secondary" data-close>Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgGoalEntry">
+    <form id="formGoalEntry">
+      <h2 id="goalEntryTitle">Registrar pago</h2>
+      <label>Monto
+        <input required id="goalEntryAmount" type="number" inputmode="decimal" step="0.01" min="0.01">
+      </label>
+      <label>Fecha
+        <input required id="goalEntryDate" type="date">
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn-secondary" data-close>Cancelar</button>
+        <button type="submit" class="btn-primary">Registrar</button>
       </div>
     </form>
   </dialog>
@@ -235,21 +355,36 @@
     function load() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { categories: [], fixedExpenses: [], variableExpenses: [] };
+        if (!raw) return { categories: [], movements: [], goals: [] };
         const parsed = JSON.parse(raw);
-        return {
-          categories: parsed.categories || [],
-          fixedExpenses: parsed.fixedExpenses || [],
-          variableExpenses: parsed.variableExpenses || []
-        };
+        if (parsed.movements) {
+          return { categories: parsed.categories || [], movements: parsed.movements || [], goals: parsed.goals || [] };
+        }
+        // migración desde la versión anterior (fijos/variables separados)
+        const categories = parsed.categories || [];
+        const movements = [];
+        (parsed.fixedExpenses || []).forEach(fe => movements.push({
+          id: fe.id, name: fe.name, amount: fe.amount, kind: 'gasto',
+          recurring: true, frequency: 'monthly', dueDay: null, active: fe.active !== false, categoryId: fe.categoryId || null
+        }));
+        (parsed.variableExpenses || []).forEach(ve => movements.push({
+          id: ve.id, name: ve.name, amount: ve.amount, kind: 'gasto',
+          recurring: false, date: ve.date, categoryId: ve.categoryId || null
+        }));
+        return { categories, movements, goals: [] };
       } catch {
-        return { categories: [], fixedExpenses: [], variableExpenses: [] };
+        return { categories: [], movements: [], goals: [] };
       }
     }
     function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
     let state = load();
-    let expenseKind = 'fixed';
+    let movementFilter = 'todos';
+    let movKind = 'gasto';
+    let movCategoryId = null;
+    let movFrequency = 'monthly';
+    let goalKind = 'deuda';
+    let currentGoalId = null;
 
     const currency = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' });
     function money(n) { return currency.format(n || 0); }
@@ -266,79 +401,141 @@
     function formatDate(iso) {
       return parseLocalDate(iso).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
+    function stripToday(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 
-    function thisMonthVariable() {
+    function thisMonthMovements() {
       const now = new Date();
-      return state.variableExpenses.filter(e => isSameMonth(e.date, now));
+      return state.movements.filter(m => appliesThisMonth(m, now));
     }
-    function totalFixed() { return state.fixedExpenses.filter(e => e.active).reduce((s, e) => s + e.amount, 0); }
-    function totalVariable() { return thisMonthVariable().reduce((s, e) => s + e.amount, 0); }
+    function totalIngresos() {
+      return thisMonthMovements().filter(m => m.kind === 'ingreso').reduce((s, m) => s + monthlyEquivalent(m), 0);
+    }
+    function totalGastos() {
+      return thisMonthMovements().filter(m => m.kind === 'gasto').reduce((s, m) => s + monthlyEquivalent(m), 0);
+    }
+    function totalGastosFijos() {
+      return thisMonthMovements().filter(m => m.kind === 'gasto' && m.recurring).reduce((s, m) => s + monthlyEquivalent(m), 0);
+    }
+    function totalGastosVariables() {
+      return thisMonthMovements().filter(m => m.kind === 'gasto' && !m.recurring).reduce((s, m) => s + m.amount, 0);
+    }
     function categorySpent(catId) {
-      return thisMonthVariable().filter(e => e.categoryId === catId).reduce((s, e) => s + e.amount, 0);
+      return thisMonthMovements().filter(m => m.kind === 'gasto' && m.categoryId === catId).reduce((s, m) => s + monthlyEquivalent(m), 0);
     }
 
-    function renderAll() { renderDashboard(); renderExpenses(); renderCategories(); }
+    function renderAll() { renderDashboard(); renderMovements(); renderGoals(); renderCategories(); }
 
     function renderDashboard() {
-      document.getElementById('sumFixed').textContent = money(totalFixed());
-      document.getElementById('sumVariable').textContent = money(totalVariable());
-      document.getElementById('sumTotal').textContent = money(totalFixed() + totalVariable());
+      const label = new Date().toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
+      document.getElementById('heroMonth').textContent = label.charAt(0).toUpperCase() + label.slice(1);
 
-      const list = document.getElementById('categoryProgress');
+      const ingresos = totalIngresos();
+      const gastos = totalGastos();
+      const restante = ingresos - gastos;
+      const heroEl = document.getElementById('heroAmount');
+      heroEl.textContent = money(restante);
+      heroEl.className = 'hero-amount' + (ingresos <= 0 ? ' level-empty' : ' level-' + budgetLevel(gastos, ingresos));
+
+      const runwayWrap = document.getElementById('heroRunwayWrap');
+      if (ingresos > 0) {
+        const level = budgetLevel(gastos, ingresos);
+        const pct = Math.min(gastos / ingresos, 1) * 100;
+        runwayWrap.innerHTML = `
+          <div class="runway"><div class="runway-fill level-${level}" style="width:${pct}%"></div></div>
+          <div class="runway-labels"><span>Gastado ${money(gastos)}</span><span>Ingresos ${money(ingresos)}</span></div>`;
+      } else {
+        runwayWrap.innerHTML = `<p class="hint">Agregá tus ingresos del mes tocando + para ver cuánto te queda.</p>`;
+      }
+
+      document.getElementById('sumFixed').textContent = money(totalGastosFijos());
+      document.getElementById('sumVariable').textContent = money(totalGastosVariables());
+
+      renderUpcoming();
+
+      const catSpends = state.categories.map(cat => ({ cat, spent: categorySpent(cat.id) }));
+      const maxSpent = Math.max(1, ...catSpends.map(x => x.spent));
+      const catList = document.getElementById('categoryProgress');
       if (state.categories.length === 0) {
-        list.innerHTML = emptyMsg('Todavía no hay categorías. Creá una en la pestaña Categorías.');
+        catList.innerHTML = emptyMsg('Todavía no hay categorías. Creá una en la pestaña Categorías.');
         return;
       }
-      list.innerHTML = state.categories.map(cat => {
-        const spent = categorySpent(cat.id);
-        const level = budgetLevel(spent, cat.limit);
-        const pct = cat.limit ? Math.min(spent / cat.limit, 1) * 100 : 0;
+      catList.innerHTML = catSpends.map(({ cat, spent }) => {
+        const hasLimit = cat.limit && cat.limit > 0;
+        const level = hasLimit ? budgetLevel(spent, cat.limit) : 'none';
+        const pct = hasLimit ? Math.min(spent / cat.limit, 1) * 100 : (spent / maxSpent) * 100;
         return `
           <div class="progress-row">
             <div class="progress-head">
               <span>${escapeHtml(cat.name)}</span>
-              <span class="level-${level}">${cat.limit ? money(spent) + ' / ' + money(cat.limit) : money(spent)}</span>
+              <span class="${hasLimit ? 'level-' + level : ''}">${hasLimit ? money(spent) + ' / ' + money(cat.limit) : money(spent)}</span>
             </div>
-            ${cat.limit ? `<div class="progress-track"><div class="progress-fill level-${level}" style="width:${pct}%"></div></div>` : ''}
+            <div class="progress-track"><div class="progress-fill level-${level}" style="width:${pct}%"></div></div>
           </div>`;
       }).join('');
     }
 
-    function renderExpenses() {
-      document.getElementById('btnKindFixed').classList.toggle('active', expenseKind === 'fixed');
-      document.getElementById('btnKindVariable').classList.toggle('active', expenseKind === 'variable');
-      const list = document.getElementById('expenseList');
+    function renderUpcoming() {
+      const today = new Date();
+      const items = state.movements
+        .filter(m => m.recurring && m.active !== false && m.dueDay !== null && m.dueDay !== undefined)
+        .map(m => ({ m, when: nextOccurrence(m, today) }))
+        .filter(x => x.when)
+        .sort((a, b) => a.when - b.when)
+        .slice(0, 4);
+      const card = document.getElementById('upcomingCard');
+      if (items.length === 0) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      const startOfToday = stripToday(today);
+      document.getElementById('upcomingList').innerHTML = items.map(({ m, when }) => {
+        const days = Math.round((when - startOfToday) / 86400000);
+        const whenLabel = days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : `En ${days} días`;
+        return `<div class="upcoming-row"><span>${escapeHtml(m.name)}</span><span class="upcoming-when">${whenLabel} · ${money(m.amount)}</span></div>`;
+      }).join('');
+    }
 
-      if (expenseKind === 'fixed') {
-        if (state.fixedExpenses.length === 0) { list.innerHTML = emptyMsg('Sin gastos fijos. Agregá arriendo, suscripciones, etc.'); return; }
-        list.innerHTML = state.fixedExpenses.slice().sort((a, b) => a.name.localeCompare(b.name)).map(e => {
-          const cat = state.categories.find(c => c.id === e.categoryId);
-          return `
-            <div class="list-row">
-              <label class="toggle"><input type="checkbox" ${e.active ? 'checked' : ''} data-action="toggle-fixed" data-id="${e.id}"></label>
-              <div class="row-main">
-                <div>${escapeHtml(e.name)}</div>
-                ${cat ? `<div class="row-sub">${escapeHtml(cat.name)}</div>` : ''}
-              </div>
-              <div class="row-amount">${money(e.amount)}</div>
-              <button class="row-delete" data-action="delete-fixed" data-id="${e.id}" aria-label="Eliminar">✕</button>
-            </div>`;
-        }).join('');
-      } else {
-        if (state.variableExpenses.length === 0) { list.innerHTML = emptyMsg('Sin gastos variables. Registrá lo que gastás día a día.'); return; }
-        list.innerHTML = state.variableExpenses.slice().sort((a, b) => b.date.localeCompare(a.date)).map(e => {
-          const cat = state.categories.find(c => c.id === e.categoryId);
-          return `
-            <div class="list-row">
-              <div class="row-main">
-                <div>${escapeHtml(e.name)}</div>
-                <div class="row-sub">${cat ? escapeHtml(cat.name) + ' · ' : ''}${formatDate(e.date)}</div>
-              </div>
-              <div class="row-amount">${money(e.amount)}</div>
-              <button class="row-delete" data-action="delete-variable" data-id="${e.id}" aria-label="Eliminar">✕</button>
-            </div>`;
-        }).join('');
+    function movementSubLabel(m) {
+      const cat = state.categories.find(c => c.id === m.categoryId);
+      if (m.recurring) {
+        const freqLabel = m.frequency === 'weekly' ? 'Cada semana' : 'Cada mes';
+        let due = '';
+        if (m.dueDay !== null && m.dueDay !== undefined) {
+          const dayNames = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+          due = m.frequency === 'weekly' ? ` · vence ${dayNames[m.dueDay]}` : ` · vence el ${m.dueDay}`;
+        }
+        return `${freqLabel}${due}${cat ? ' · ' + escapeHtml(cat.name) : ''}`;
       }
+      return `${cat ? escapeHtml(cat.name) + ' · ' : ''}${formatDate(m.date)}`;
+    }
+
+    function renderMovementRow(m) {
+      const sign = m.kind === 'ingreso' ? '+' : '−';
+      const signClass = m.kind === 'ingreso' ? 'sign-in' : '';
+      const toggle = m.recurring
+        ? `<label class="switch"><input type="checkbox" ${m.active !== false ? 'checked' : ''} data-action="toggle-recurring" data-id="${m.id}"><span></span></label>`
+        : '';
+      return `
+        <div class="list-row">
+          ${toggle}
+          <div class="row-main">
+            <div>${escapeHtml(m.name)}</div>
+            <div class="row-sub">${movementSubLabel(m)}</div>
+          </div>
+          <div class="row-amount ${signClass}">${sign}${money(m.amount)}</div>
+          <button class="row-delete" data-action="delete-movement" data-id="${m.id}" aria-label="Eliminar">✕</button>
+        </div>`;
+    }
+
+    function renderMovements() {
+      document.querySelectorAll('#movementFilters button').forEach(b => b.classList.toggle('active', b.dataset.filter === movementFilter));
+      const matches = m => movementFilter === 'todos' || m.kind === movementFilter;
+      const recurring = state.movements.filter(m => m.recurring && matches(m));
+      const dated = state.movements.filter(m => !m.recurring && matches(m)).slice().sort((a, b) => b.date.localeCompare(a.date));
+
+      let html = '';
+      if (recurring.length) html += `<div class="section-label">Fijo / recurrente</div>` + recurring.map(renderMovementRow).join('');
+      if (dated.length) html += `<div class="section-label">Movimientos</div>` + dated.map(renderMovementRow).join('');
+      if (!recurring.length && !dated.length) html = emptyMsg('Sin movimientos todavía. Tocá + para agregar un ingreso o un gasto.');
+      document.getElementById('movementList').innerHTML = html;
     }
 
     function renderCategories() {
@@ -357,44 +554,71 @@
         </div>`).join('');
     }
 
+    function renderGoals() {
+      const list = document.getElementById('goalList');
+      const empty = document.getElementById('goalEmpty');
+      if (state.goals.length === 0) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      list.innerHTML = state.goals.map(g => {
+        const paid = goalPaid(g);
+        const remaining = goalRemaining(g);
+        const pct = goalPercent(g);
+        const paidLabel = g.kind === 'ahorro' ? 'Ahorrado' : 'Pagado';
+        const actionLabel = g.kind === 'ahorro' ? '+ Registrar ahorro' : '+ Registrar pago';
+        return `
+          <div class="goal-card">
+            <button class="row-delete" style="position:absolute;top:14px;right:14px;" data-action="delete-goal" data-id="${g.id}" aria-label="Eliminar">✕</button>
+            <div class="goal-name">${escapeHtml(g.name)}</div>
+            <span class="goal-kind ${g.kind}">${g.kind === 'ahorro' ? 'Ahorro' : 'Deuda'}</span>
+            <div class="goal-track"><div class="goal-fill ${g.kind}" style="width:${pct}%"></div></div>
+            <div class="goal-meta">
+              <span>${paidLabel} ${money(paid)}</span>
+              <span>Falta ${money(remaining)}</span>
+              <span>${Math.round(pct)}%</span>
+            </div>
+            <div class="goal-actions">
+              <button type="button" class="btn-small" data-action="add-entry" data-id="${g.id}">${actionLabel}</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
     // Tabs
     document.querySelectorAll('.tabbar button').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
         document.querySelectorAll('.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + tab));
         document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('active', b === btn));
-        document.getElementById('topTitle').textContent = { resumen: 'Resumen', gastos: 'Gastos', categorias: 'Categorías' }[tab];
+        document.getElementById('topTitle').textContent =
+          { resumen: 'Resumen', movimientos: 'Movimientos', metas: 'Metas', categorias: 'Categorías' }[tab];
       });
     });
 
-    // Gastos: Fijos/Variables toggle
-    document.getElementById('btnKindFixed').addEventListener('click', () => { expenseKind = 'fixed'; renderExpenses(); });
-    document.getElementById('btnKindVariable').addEventListener('click', () => { expenseKind = 'variable'; renderExpenses(); });
-
-    // Expense list actions (delete / toggle active)
-    document.getElementById('expenseList').addEventListener('click', e => {
-      const btn = e.target.closest('[data-action]');
+    // Movimientos: filtro
+    document.getElementById('movementFilters').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-filter]');
       if (!btn) return;
-      const id = btn.dataset.id;
-      if (btn.dataset.action === 'delete-fixed') state.fixedExpenses = state.fixedExpenses.filter(x => x.id !== id);
-      if (btn.dataset.action === 'delete-variable') state.variableExpenses = state.variableExpenses.filter(x => x.id !== id);
-      save(); renderAll();
+      movementFilter = btn.dataset.filter;
+      renderMovements();
     });
-    document.getElementById('expenseList').addEventListener('change', e => {
-      const input = e.target.closest('[data-action="toggle-fixed"]');
+    document.getElementById('movementList').addEventListener('click', e => {
+      const del = e.target.closest('[data-action="delete-movement"]');
+      if (del) { state.movements = state.movements.filter(m => m.id !== del.dataset.id); save(); renderAll(); }
+    });
+    document.getElementById('movementList').addEventListener('change', e => {
+      const input = e.target.closest('[data-action="toggle-recurring"]');
       if (!input) return;
-      const item = state.fixedExpenses.find(x => x.id === input.dataset.id);
-      if (item) { item.active = input.checked; save(); renderAll(); }
+      const m = state.movements.find(x => x.id === input.dataset.id);
+      if (m) { m.active = input.checked; save(); renderAll(); }
     });
 
-    // Category list actions (delete / edit limit)
+    // Categorías
     document.getElementById('categoryList').addEventListener('click', e => {
       const btn = e.target.closest('[data-action="delete-category"]');
       if (!btn) return;
       const id = btn.dataset.id;
       state.categories = state.categories.filter(c => c.id !== id);
-      state.fixedExpenses.forEach(x => { if (x.categoryId === id) x.categoryId = null; });
-      state.variableExpenses.forEach(x => { if (x.categoryId === id) x.categoryId = null; });
+      state.movements.forEach(m => { if (m.categoryId === id) m.categoryId = null; });
       save(); renderAll();
     });
     document.getElementById('categoryList').addEventListener('change', e => {
@@ -404,66 +628,128 @@
       if (cat) { cat.limit = input.value === '' ? null : parseFloat(input.value); save(); renderDashboard(); }
     });
 
-    // Dialogs
-    document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => btn.closest('dialog').close()));
-    function populateCategorySelects() {
-      ['fixedCategory', 'variableCategory'].forEach(id => {
-        const sel = document.getElementById(id);
-        const current = sel.value;
-        sel.innerHTML = '<option value="">Ninguna</option>' +
-          state.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-        sel.value = current;
-      });
-    }
-
-    document.getElementById('btnAdd').addEventListener('click', () => {
-      const activeTab = document.querySelector('.tab.active').id;
-      if (activeTab === 'tab-gastos') {
-        populateCategorySelects();
-        if (expenseKind === 'fixed') {
-          document.getElementById('dlgFixed').showModal();
-        } else {
-          document.getElementById('variableDate').value = todayISO();
-          document.getElementById('dlgVariable').showModal();
-        }
-      } else if (activeTab === 'tab-categorias') {
-        document.getElementById('dlgCategory').showModal();
-      } else {
-        document.querySelector('.tabbar button[data-tab="gastos"]').click();
+    // Metas
+    document.getElementById('goalList').addEventListener('click', e => {
+      const del = e.target.closest('[data-action="delete-goal"]');
+      if (del) { state.goals = state.goals.filter(g => g.id !== del.dataset.id); save(); renderGoals(); return; }
+      const add = e.target.closest('[data-action="add-entry"]');
+      if (add) {
+        currentGoalId = add.dataset.id;
+        const g = state.goals.find(x => x.id === currentGoalId);
+        document.getElementById('goalEntryTitle').textContent = g.kind === 'ahorro' ? 'Registrar ahorro' : 'Registrar pago';
+        document.getElementById('goalEntryAmount').value = '';
+        document.getElementById('goalEntryDate').value = todayISO();
+        document.getElementById('dlgGoalEntry').showModal();
       }
     });
 
-    document.getElementById('formFixed').addEventListener('submit', e => {
+    // Diálogos: cerrar
+    document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => btn.closest('dialog').close()));
+
+    // Diálogo: nuevo movimiento
+    function populateCategoryChips() {
+      const wrap = document.getElementById('movCategoryChips');
+      wrap.innerHTML =
+        `<button type="button" class="chip ${movCategoryId === null ? 'active' : ''}" data-cat="">Ninguna</button>` +
+        state.categories.map(c => `<button type="button" class="chip ${movCategoryId === c.id ? 'active' : ''}" data-cat="${c.id}">${escapeHtml(c.name)}</button>`).join('') +
+        `<button type="button" class="chip chip-new" id="chipNewCategory">+ Nueva</button>`;
+    }
+    document.getElementById('movCategoryChips').addEventListener('click', e => {
+      if (e.target.closest('#chipNewCategory')) {
+        const name = (prompt('Nombre de la nueva categoría:') || '').trim();
+        if (name) {
+          const existing = state.categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+          const cat = existing || { id: uid(), name, limit: null };
+          if (!existing) { state.categories.push(cat); save(); }
+          movCategoryId = cat.id;
+          populateCategoryChips();
+        }
+        return;
+      }
+      const chip = e.target.closest('.chip[data-cat]');
+      if (chip) { movCategoryId = chip.dataset.cat || null; populateCategoryChips(); }
+    });
+
+    document.getElementById('kindToggle').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-kind]');
+      if (!btn) return;
+      movKind = btn.dataset.kind;
+      document.querySelectorAll('#kindToggle button').forEach(b => b.classList.toggle('active', b === btn));
+    });
+
+    function populateDueDayOptions(freq) {
+      const sel = document.getElementById('movDueDay');
+      const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      let opts = '<option value="">Sin definir</option>';
+      if (freq === 'weekly') {
+        opts += dayNames.map((n, i) => `<option value="${i}">${n}</option>`).join('');
+      } else {
+        for (let d = 1; d <= 31; d++) opts += `<option value="${d}">Día ${d}</option>`;
+      }
+      sel.innerHTML = opts;
+    }
+    document.getElementById('movFrequencyToggle').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-freq]');
+      if (!btn) return;
+      movFrequency = btn.dataset.freq;
+      document.querySelectorAll('#movFrequencyToggle button').forEach(b => b.classList.toggle('active', b === btn));
+      populateDueDayOptions(movFrequency);
+    });
+    document.getElementById('movRecurring').addEventListener('change', e => {
+      const on = e.target.checked;
+      document.getElementById('movRecurringOptions').style.display = on ? 'block' : 'none';
+      document.getElementById('movDateWrap').style.display = on ? 'none' : 'block';
+      if (on) populateDueDayOptions(movFrequency);
+    });
+
+    function openMovementDialog() {
+      movKind = movementFilter === 'ingreso' ? 'ingreso' : 'gasto';
+      movCategoryId = null;
+      movFrequency = 'monthly';
+      document.querySelectorAll('#kindToggle button').forEach(b => b.classList.toggle('active', b.dataset.kind === movKind));
+      document.querySelectorAll('#movFrequencyToggle button').forEach(b => b.classList.toggle('active', b.dataset.freq === 'monthly'));
+      document.getElementById('movName').value = '';
+      document.getElementById('movAmount').value = '';
+      document.getElementById('movRecurring').checked = false;
+      document.getElementById('movRecurringOptions').style.display = 'none';
+      document.getElementById('movDateWrap').style.display = 'block';
+      document.getElementById('movDate').value = todayISO();
+      populateCategoryChips();
+      document.getElementById('dlgMovement').showModal();
+    }
+
+    document.getElementById('formMovement').addEventListener('submit', e => {
       e.preventDefault();
-      const name = document.getElementById('fixedName').value.trim();
-      const amount = parseFloat(document.getElementById('fixedAmount').value);
-      if (!name || isNaN(amount)) return;
-      const categoryId = document.getElementById('fixedCategory').value || null;
-      state.fixedExpenses.push({ id: uid(), name, amount, active: true, categoryId });
+      const name = document.getElementById('movName').value.trim();
+      const amount = parseFloat(document.getElementById('movAmount').value);
+      if (!name || isNaN(amount) || amount <= 0) return;
+      const recurring = document.getElementById('movRecurring').checked;
+      const movement = { id: uid(), name, amount, kind: movKind, recurring, categoryId: movCategoryId };
+      if (recurring) {
+        movement.active = true;
+        movement.frequency = movFrequency;
+        const dueVal = document.getElementById('movDueDay').value;
+        movement.dueDay = dueVal === '' ? null : parseInt(dueVal, 10);
+      } else {
+        const date = document.getElementById('movDate').value;
+        if (!date) return;
+        movement.date = date;
+      }
+      state.movements.push(movement);
       save();
-      e.target.reset();
-      document.getElementById('dlgFixed').close();
+      document.getElementById('dlgMovement').close();
       renderAll();
     });
 
-    document.getElementById('formVariable').addEventListener('submit', e => {
-      e.preventDefault();
-      const name = document.getElementById('variableName').value.trim();
-      const amount = parseFloat(document.getElementById('variableAmount').value);
-      const date = document.getElementById('variableDate').value;
-      if (!name || isNaN(amount) || !date) return;
-      const categoryId = document.getElementById('variableCategory').value || null;
-      state.variableExpenses.push({ id: uid(), name, amount, date, categoryId });
-      save();
-      e.target.reset();
-      document.getElementById('dlgVariable').close();
-      renderAll();
-    });
-
+    // Diálogo: nueva categoría (con guard de duplicados)
     document.getElementById('formCategory').addEventListener('submit', e => {
       e.preventDefault();
       const name = document.getElementById('categoryName').value.trim();
       if (!name) return;
+      const dup = state.categories.some(c => c.name.toLowerCase() === name.toLowerCase());
+      const errorEl = document.getElementById('categoryError');
+      if (dup) { errorEl.style.display = 'block'; return; }
+      errorEl.style.display = 'none';
       const limitRaw = document.getElementById('categoryLimit').value;
       const limit = limitRaw === '' ? null : parseFloat(limitRaw);
       state.categories.push({ id: uid(), name, limit });
@@ -471,6 +757,52 @@
       e.target.reset();
       document.getElementById('dlgCategory').close();
       renderAll();
+    });
+
+    // Diálogo: nueva meta
+    document.getElementById('goalKindToggle').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-kind]');
+      if (!btn) return;
+      goalKind = btn.dataset.kind;
+      document.querySelectorAll('#goalKindToggle button').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById('goalTargetText').textContent = goalKind === 'ahorro' ? 'Meta de ahorro' : 'Monto total a pagar';
+    });
+    document.getElementById('formGoal').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = document.getElementById('goalName').value.trim();
+      const target = parseFloat(document.getElementById('goalTarget').value);
+      if (!name || isNaN(target) || target <= 0) return;
+      state.goals.push({ id: uid(), name, kind: goalKind, target, entries: [] });
+      save();
+      e.target.reset();
+      goalKind = 'deuda';
+      document.querySelectorAll('#goalKindToggle button').forEach(b => b.classList.toggle('active', b.dataset.kind === 'deuda'));
+      document.getElementById('goalTargetText').textContent = 'Monto total a pagar';
+      document.getElementById('dlgGoal').close();
+      renderGoals();
+    });
+
+    // Diálogo: registrar pago/ahorro
+    document.getElementById('formGoalEntry').addEventListener('submit', e => {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('goalEntryAmount').value);
+      const date = document.getElementById('goalEntryDate').value;
+      if (isNaN(amount) || amount <= 0 || !date || !currentGoalId) return;
+      const g = state.goals.find(x => x.id === currentGoalId);
+      if (!g) return;
+      g.entries = g.entries || [];
+      g.entries.push({ id: uid(), amount, date });
+      save();
+      document.getElementById('dlgGoalEntry').close();
+      renderGoals();
+    });
+
+    // Botón +
+    document.getElementById('btnAdd').addEventListener('click', () => {
+      const activeTab = document.querySelector('.tab.active').id;
+      if (activeTab === 'tab-categorias') { document.getElementById('dlgCategory').showModal(); return; }
+      if (activeTab === 'tab-metas') { document.getElementById('dlgGoal').showModal(); return; }
+      openMovementDialog();
     });
 
     renderAll();
