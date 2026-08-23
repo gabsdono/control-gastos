@@ -187,6 +187,8 @@
   dialog form { padding: 22px; max-height: 82vh; overflow-y: auto; }
   dialog h2 { margin: 0 0 16px; font-size: 18px; font-family: var(--font-display); }
   dialog label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .field-group { margin-bottom: 14px; }
+  .field-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
   dialog input, dialog select {
     display: block; width: 100%; margin-top: 6px; padding: 11px; font-size: 16px;
     border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text);
@@ -294,12 +296,13 @@
         <label class="switch"><input type="checkbox" id="movRecurring"><span></span></label>
       </label>
       <div id="movRecurringOptions" style="display:none;">
-        <label>Frecuencia
+        <div class="field-group">
+          <div class="field-label">Frecuencia</div>
           <div class="segmented" id="movFrequencyToggle">
             <button type="button" data-freq="monthly" class="active">Mensual</button>
             <button type="button" data-freq="weekly">Semanal</button>
           </div>
-        </label>
+        </div>
         <label>Día de vencimiento (opcional)
           <select id="movDueDay"></select>
         </label>
@@ -307,12 +310,14 @@
       <label id="movDateWrap">Fecha
         <input id="movDate" type="date">
       </label>
-      <label id="movAccountWrap">Cuenta
+      <div class="field-group" id="movAccountWrap">
+        <div class="field-label">Cuenta</div>
         <div class="chips" id="movAccountChips"></div>
-      </label>
-      <label>Categoría (opcional)
+      </div>
+      <div class="field-group">
+        <div class="field-label">Categoría (opcional)</div>
         <div class="chips" id="movCategoryChips"></div>
-      </label>
+      </div>
       <div class="dialog-actions">
         <button type="button" class="btn-secondary" data-close>Cancelar</button>
         <button type="submit" class="btn-primary">Guardar</button>
