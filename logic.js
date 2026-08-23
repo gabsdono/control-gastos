@@ -27,12 +27,29 @@ function appliesThisMonth(movement, reference) {
   return isSameMonth(movement.date, reference);
 }
 
-// Un gasto/ingreso semanal es "N por semana", punto — no depende de qué mes sea
-// ni de cuántos lunes tenga. Para sumarlo junto a lo mensual se usa un número fijo
-// de 4 semanas por mes (simple y predecible, no varía de un mes a otro).
+// Cuántas veces cae ese día de la semana dentro de un mes (0=domingo..6=sábado).
+// Un mes tiene 4 o 5 lunes, nunca un número fraccionario.
+function occurrencesOfWeekdayInMonth(weekday, year, month) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (new Date(year, month, d).getDay() === weekday) count++;
+  }
+  return count;
+}
+
+// Con día de vencimiento definido, un gasto/ingreso semanal pesa distinto según
+// el mes tenga 4 o 5 de ese día (se cuenta el calendario real). Sin día definido
+// no hay de qué contar, así que se usa un promedio fijo de 4 semanas.
 const WEEKS_PER_MONTH = 4;
-function monthlyEquivalent(movement) {
-  if (movement.recurring && movement.frequency === 'weekly') return movement.amount * WEEKS_PER_MONTH;
+function monthlyEquivalent(movement, reference) {
+  reference = reference || new Date();
+  if (movement.recurring && movement.frequency === 'weekly') {
+    if (movement.dueDay !== null && movement.dueDay !== undefined) {
+      return movement.amount * occurrencesOfWeekdayInMonth(movement.dueDay, reference.getFullYear(), reference.getMonth());
+    }
+    return movement.amount * WEEKS_PER_MONTH;
+  }
   return movement.amount;
 }
 
@@ -87,7 +104,7 @@ function accountBalance(account, movements) {
 
 if (typeof module !== 'undefined') {
   module.exports = {
-    budgetLevel, isSameMonth, parseLocalDate, appliesThisMonth,
+    budgetLevel, isSameMonth, parseLocalDate, appliesThisMonth, occurrencesOfWeekdayInMonth,
     monthlyEquivalent, goalPaid, goalRemaining, goalPercent, nextOccurrence, accountBalance
   };
 }
