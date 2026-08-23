@@ -27,10 +27,30 @@ function appliesThisMonth(movement, reference) {
   return isSameMonth(movement.date, reference);
 }
 
-// Semanas por mes: 52/12. Para comparar un compromiso semanal contra un presupuesto mensual.
+// Cuántas veces cae ese día de la semana dentro de un mes (0=domingo..6=sábado).
+// Un mes tiene 4 o 5 lunes, nunca un número fraccionario — así el total mensual
+// de un gasto semanal se puede verificar contando en un calendario real.
+function occurrencesOfWeekdayInMonth(weekday, year, month) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (new Date(year, month, d).getDay() === weekday) count++;
+  }
+  return count;
+}
+
+// Promedio de semanas por mes (52/12), usado solo si un gasto semanal no tiene
+// día de vencimiento definido (no hay de qué día contar ocurrencias).
 const WEEKS_PER_MONTH = 52 / 12;
-function monthlyEquivalent(movement) {
-  if (movement.recurring && movement.frequency === 'weekly') return movement.amount * WEEKS_PER_MONTH;
+
+function monthlyEquivalent(movement, reference) {
+  reference = reference || new Date();
+  if (movement.recurring && movement.frequency === 'weekly') {
+    if (movement.dueDay !== null && movement.dueDay !== undefined) {
+      return movement.amount * occurrencesOfWeekdayInMonth(movement.dueDay, reference.getFullYear(), reference.getMonth());
+    }
+    return movement.amount * WEEKS_PER_MONTH;
+  }
   return movement.amount;
 }
 
@@ -85,7 +105,7 @@ function accountBalance(account, movements) {
 
 if (typeof module !== 'undefined') {
   module.exports = {
-    budgetLevel, isSameMonth, parseLocalDate, appliesThisMonth,
+    budgetLevel, isSameMonth, parseLocalDate, appliesThisMonth, occurrencesOfWeekdayInMonth,
     monthlyEquivalent, goalPaid, goalRemaining, goalPercent, nextOccurrence, accountBalance
   };
 }
