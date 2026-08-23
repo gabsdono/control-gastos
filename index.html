@@ -287,7 +287,7 @@
         <input required id="movName" type="text" placeholder="Ej. Supermercado">
       </label>
       <label>Monto
-        <input required id="movAmount" type="number" inputmode="decimal" step="0.01" min="0.01">
+        <input required id="movAmount" type="text" inputmode="decimal">
       </label>
       <label class="row-toggle">
         <span>Se repite</span>
@@ -327,7 +327,7 @@
         <input required id="categoryName" type="text" placeholder="Comida">
       </label>
       <label>Límite mensual (opcional)
-        <input id="categoryLimit" type="number" inputmode="decimal" step="0.01" min="0">
+        <input id="categoryLimit" type="text" inputmode="decimal">
       </label>
       <p class="hint" id="categoryError" style="display:none; color: var(--over);">Ya existe una categoría con ese nombre.</p>
       <div class="dialog-actions">
@@ -348,7 +348,7 @@
         <input required id="goalName" type="text" placeholder="Ej. Tarjeta de crédito">
       </label>
       <label><span id="goalTargetText">Monto total a pagar</span>
-        <input required id="goalTarget" type="number" inputmode="decimal" step="0.01" min="0.01">
+        <input required id="goalTarget" type="text" inputmode="decimal">
       </label>
       <div class="dialog-actions">
         <button type="button" class="btn-secondary" data-close>Cancelar</button>
@@ -361,7 +361,7 @@
     <form id="formGoalEntry">
       <h2 id="goalEntryTitle">Registrar pago</h2>
       <label>Monto
-        <input required id="goalEntryAmount" type="number" inputmode="decimal" step="0.01" min="0.01">
+        <input required id="goalEntryAmount" type="text" inputmode="decimal">
       </label>
       <label>Fecha
         <input required id="goalEntryDate" type="date">
@@ -437,6 +437,9 @@
 
     const currency = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' });
     function money(n) { return currency.format(n || 0); }
+    // El teclado numérico de iOS en es-EC muestra coma decimal; type="number" la rechaza sola.
+    // Los montos usan type="text" + este parser para aceptar "12,50" igual que "12.50".
+    function parseAmount(str) { return parseFloat(String(str).trim().replace(',', '.')); }
     function uid() { return crypto.randomUUID(); }
     function escapeHtml(str) {
       return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -654,7 +657,7 @@
           <div class="row-main">
             <div><span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}</div>
             <div class="row-sub">
-              Límite: <input type="number" inputmode="decimal" step="0.01" min="0" placeholder="Sin límite"
+              Límite: <input type="text" inputmode="decimal" placeholder="Sin límite"
                 value="${cat.limit ?? ''}" data-action="edit-limit" data-id="${cat.id}" class="inline-input">
             </div>
           </div>
@@ -729,7 +732,7 @@
       const current = accountBalance(account, state.movements);
       const input = prompt(`¿Cuánto tenés ahora en ${account.name}?`, current.toFixed(2));
       if (input === null) return;
-      const target = parseFloat(input.replace(',', '.'));
+      const target = parseAmount(input);
       if (isNaN(target)) return;
       account.startBalance = (account.startBalance || 0) + (target - current);
       save();
@@ -749,7 +752,7 @@
       const input = e.target.closest('[data-action="edit-limit"]');
       if (!input) return;
       const cat = state.categories.find(c => c.id === input.dataset.id);
-      if (cat) { cat.limit = input.value === '' ? null : parseFloat(input.value); save(); renderDashboard(); }
+      if (cat) { cat.limit = input.value === '' ? null : parseAmount(input.value); save(); renderDashboard(); }
     });
 
     // Metas
@@ -871,7 +874,7 @@
     document.getElementById('formMovement').addEventListener('submit', e => {
       e.preventDefault();
       const name = document.getElementById('movName').value.trim();
-      const amount = parseFloat(document.getElementById('movAmount').value);
+      const amount = parseAmount(document.getElementById('movAmount').value);
       if (!name || isNaN(amount) || amount <= 0) return;
       const recurring = document.getElementById('movRecurring').checked;
       const movement = { id: uid(), name, amount, kind: movKind, recurring, categoryId: movCategoryId };
@@ -902,7 +905,7 @@
       if (dup) { errorEl.style.display = 'block'; return; }
       errorEl.style.display = 'none';
       const limitRaw = document.getElementById('categoryLimit').value;
-      const limit = limitRaw === '' ? null : parseFloat(limitRaw);
+      const limit = limitRaw === '' ? null : parseAmount(limitRaw);
       state.categories.push({ id: uid(), name, limit, color: nextCategoryColor(state.categories) });
       save();
       e.target.reset();
@@ -921,7 +924,7 @@
     document.getElementById('formGoal').addEventListener('submit', e => {
       e.preventDefault();
       const name = document.getElementById('goalName').value.trim();
-      const target = parseFloat(document.getElementById('goalTarget').value);
+      const target = parseAmount(document.getElementById('goalTarget').value);
       if (!name || isNaN(target) || target <= 0) return;
       state.goals.push({ id: uid(), name, kind: goalKind, target, entries: [] });
       save();
@@ -936,7 +939,7 @@
     // Diálogo: registrar pago/ahorro
     document.getElementById('formGoalEntry').addEventListener('submit', e => {
       e.preventDefault();
-      const amount = parseFloat(document.getElementById('goalEntryAmount').value);
+      const amount = parseAmount(document.getElementById('goalEntryAmount').value);
       const date = document.getElementById('goalEntryDate').value;
       if (isNaN(amount) || amount <= 0 || !date || !currentGoalId) return;
       const g = state.goals.find(x => x.id === currentGoalId);
