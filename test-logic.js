@@ -1,6 +1,6 @@
 const assert = require('assert');
 const {
-  budgetLevel, isSameMonth, appliesThisMonth, monthlyEquivalent, occurrencesOfWeekdayInMonth,
+  budgetLevel, isSameMonth, appliesThisMonth, monthlyEquivalent,
   goalPaid, goalRemaining, goalPercent, nextOccurrence, accountBalance
 } = require('./logic.js');
 
@@ -24,19 +24,10 @@ assert.strictEqual(appliesThisMonth({ recurring: true, active: false }, ref), fa
 assert.strictEqual(appliesThisMonth({ recurring: false, date: '2026-08-10' }, ref), true);
 assert.strictEqual(appliesThisMonth({ recurring: false, date: '2026-07-10' }, ref), false);
 
-// monthlyEquivalent
+// monthlyEquivalent: un gasto semanal siempre pesa lo mismo, no importa el mes (×4 fijo)
 assert.strictEqual(monthlyEquivalent({ recurring: false, amount: 20 }), 20);
 assert.strictEqual(monthlyEquivalent({ recurring: true, frequency: 'monthly', amount: 20 }), 20);
-// sin día de vencimiento definido: promedio 52/12 (fallback, no hay de qué día contar)
-assert.ok(Math.abs(monthlyEquivalent({ recurring: true, frequency: 'weekly', amount: 20 }, ref) - 86.67) < 0.1);
-// CON día de vencimiento: cuenta lunes reales de agosto 2026 (hay 5), no un promedio
-assert.strictEqual(occurrencesOfWeekdayInMonth(1, 2026, 7), 5, 'agosto 2026 tiene 5 lunes');
-assert.strictEqual(
-  monthlyEquivalent({ recurring: true, frequency: 'weekly', amount: 20, dueDay: 1 }, ref), 100,
-  '$20/semana los lunes, 5 lunes en agosto = $100, no $86.67'
-);
-// septiembre 2026 en cambio tiene 4 lunes: el mismo gasto semanal da un total distinto
-assert.strictEqual(occurrencesOfWeekdayInMonth(1, 2026, 8), 4, 'septiembre 2026 tiene 4 lunes');
+assert.strictEqual(monthlyEquivalent({ recurring: true, frequency: 'weekly', amount: 20 }), 80, '$20/semana = $80/mes, siempre, sin importar el mes');
 
 // goal math
 const goal = { target: 200, entries: [{ amount: 50 }, { amount: 30 }] };
