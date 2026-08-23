@@ -97,6 +97,8 @@
   .progress-fill.level-warning { background: var(--warning); }
   .progress-fill.level-over { background: var(--over); }
   .progress-fill.level-none { background: var(--muted); opacity: 0.5; }
+  .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; flex-shrink: 0; vertical-align: middle; }
+  .chip .cat-dot { margin-right: 6px; }
   .empty { color: var(--muted); text-align: center; padding: 28px 8px; font-size: 15px; line-height: 1.5; }
 
   .upcoming-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
@@ -378,7 +380,20 @@
     }
     function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
+    // Paleta categórica (validada para fondo oscuro #1D1A15 — ver skill dataviz).
+    // Orden fijo: cada categoría toma el siguiente color disponible al crearse y lo conserva.
+    const CATEGORY_PALETTE = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
+    function categoryColor(cat) { return cat.color || CATEGORY_PALETTE[0]; }
+    function ensureCategoryColors(categories) {
+      categories.forEach((cat, i) => { if (!cat.color) cat.color = CATEGORY_PALETTE[i % CATEGORY_PALETTE.length]; });
+      return categories;
+    }
+    function nextCategoryColor(categories) {
+      return CATEGORY_PALETTE[categories.length % CATEGORY_PALETTE.length];
+    }
+
     let state = load();
+    ensureCategoryColors(state.categories);
     let movementFilter = 'todos';
     let movKind = 'gasto';
     let movCategoryId = null;
@@ -463,13 +478,14 @@
         const hasLimit = cat.limit && cat.limit > 0;
         const level = hasLimit ? budgetLevel(spent, cat.limit) : 'none';
         const pct = hasLimit ? Math.min(spent / cat.limit, 1) * 100 : (spent / maxSpent) * 100;
+        const fillStyle = hasLimit ? '' : `background:${categoryColor(cat)};`;
         return `
           <div class="progress-row">
             <div class="progress-head">
-              <span>${escapeHtml(cat.name)}</span>
+              <span><span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}</span>
               <span class="${hasLimit ? 'level-' + level : ''}">${hasLimit ? money(spent) + ' / ' + money(cat.limit) : money(spent)}</span>
             </div>
-            <div class="progress-track"><div class="progress-fill level-${level}" style="width:${pct}%"></div></div>
+            <div class="progress-track"><div class="progress-fill level-${level}" style="width:${pct}%;${fillStyle}"></div></div>
           </div>`;
       }).join('');
     }
@@ -495,6 +511,7 @@
 
     function movementSubLabel(m) {
       const cat = state.categories.find(c => c.id === m.categoryId);
+      const catLabel = cat ? `<span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}` : '';
       if (m.recurring) {
         const freqLabel = m.frequency === 'weekly' ? 'Cada semana' : 'Cada mes';
         let due = '';
@@ -502,9 +519,9 @@
           const dayNames = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
           due = m.frequency === 'weekly' ? ` · vence ${dayNames[m.dueDay]}` : ` · vence el ${m.dueDay}`;
         }
-        return `${freqLabel}${due}${cat ? ' · ' + escapeHtml(cat.name) : ''}`;
+        return `${freqLabel}${due}${cat ? ' · ' + catLabel : ''}`;
       }
-      return `${cat ? escapeHtml(cat.name) + ' · ' : ''}${formatDate(m.date)}`;
+      return `${cat ? catLabel + ' · ' : ''}${formatDate(m.date)}`;
     }
 
     function renderMovementRow(m) {
@@ -544,7 +561,7 @@
       list.innerHTML = state.categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(cat => `
         <div class="list-row">
           <div class="row-main">
-            <div>${escapeHtml(cat.name)}</div>
+            <div><span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}</div>
             <div class="row-sub">
               Límite: <input type="number" inputmode="decimal" step="0.01" min="0" placeholder="Sin límite"
                 value="${cat.limit ?? ''}" data-action="edit-limit" data-id="${cat.id}" class="inline-input">
@@ -651,7 +668,7 @@
       const wrap = document.getElementById('movCategoryChips');
       wrap.innerHTML =
         `<button type="button" class="chip ${movCategoryId === null ? 'active' : ''}" data-cat="">Ninguna</button>` +
-        state.categories.map(c => `<button type="button" class="chip ${movCategoryId === c.id ? 'active' : ''}" data-cat="${c.id}">${escapeHtml(c.name)}</button>`).join('') +
+        state.categories.map(c => `<button type="button" class="chip ${movCategoryId === c.id ? 'active' : ''}" data-cat="${c.id}"><span class="cat-dot" style="background:${categoryColor(c)}"></span>${escapeHtml(c.name)}</button>`).join('') +
         `<button type="button" class="chip chip-new" id="chipNewCategory">+ Nueva</button>`;
     }
     document.getElementById('movCategoryChips').addEventListener('click', e => {
@@ -659,7 +676,7 @@
         const name = (prompt('Nombre de la nueva categoría:') || '').trim();
         if (name) {
           const existing = state.categories.find(c => c.name.toLowerCase() === name.toLowerCase());
-          const cat = existing || { id: uid(), name, limit: null };
+          const cat = existing || { id: uid(), name, limit: null, color: nextCategoryColor(state.categories) };
           if (!existing) { state.categories.push(cat); save(); }
           movCategoryId = cat.id;
           populateCategoryChips();
@@ -752,7 +769,7 @@
       errorEl.style.display = 'none';
       const limitRaw = document.getElementById('categoryLimit').value;
       const limit = limitRaw === '' ? null : parseFloat(limitRaw);
-      state.categories.push({ id: uid(), name, limit });
+      state.categories.push({ id: uid(), name, limit, color: nextCategoryColor(state.categories) });
       save();
       e.target.reset();
       document.getElementById('dlgCategory').close();
