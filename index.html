@@ -523,30 +523,29 @@
       document.getElementById('sumFixedPct').textContent = ingresos > 0 ? `${Math.round(fijos / ingresos * 100)}% de tus ingresos` : '';
 
       renderUpcoming();
+      renderArchive();
 
-      const catSpends = state.categories.map(cat => ({ cat, spent: categorySpent(cat.id) }));
-      const maxSpent = Math.max(1, ...catSpends.map(x => x.spent));
       const catList = document.getElementById('categoryProgress');
       if (state.categories.length === 0) {
         catList.innerHTML = emptyMsg('Todavía no hay categorías. Creá una en la pestaña Categorías.');
-        return;
+      } else {
+        const catSpends = state.categories.map(cat => ({ cat, spent: categorySpent(cat.id) }));
+        const maxSpent = Math.max(1, ...catSpends.map(x => x.spent));
+        catList.innerHTML = catSpends.map(({ cat, spent }) => {
+          const hasLimit = cat.limit && cat.limit > 0;
+          const level = hasLimit ? budgetLevel(spent, cat.limit) : 'none';
+          const pct = hasLimit ? Math.min(spent / cat.limit, 1) * 100 : (spent / maxSpent) * 100;
+          const fillStyle = hasLimit ? '' : `background:${categoryColor(cat)};`;
+          return `
+            <div class="progress-row">
+              <div class="progress-head">
+                <span><span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}</span>
+                <span class="${hasLimit ? 'level-' + level : ''}">${hasLimit ? money(spent) + ' / ' + money(cat.limit) : money(spent)}</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill level-${level}" style="width:${pct}%;${fillStyle}"></div></div>
+            </div>`;
+        }).join('');
       }
-      catList.innerHTML = catSpends.map(({ cat, spent }) => {
-        const hasLimit = cat.limit && cat.limit > 0;
-        const level = hasLimit ? budgetLevel(spent, cat.limit) : 'none';
-        const pct = hasLimit ? Math.min(spent / cat.limit, 1) * 100 : (spent / maxSpent) * 100;
-        const fillStyle = hasLimit ? '' : `background:${categoryColor(cat)};`;
-        return `
-          <div class="progress-row">
-            <div class="progress-head">
-              <span><span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}</span>
-              <span class="${hasLimit ? 'level-' + level : ''}">${hasLimit ? money(spent) + ' / ' + money(cat.limit) : money(spent)}</span>
-            </div>
-            <div class="progress-track"><div class="progress-fill level-${level}" style="width:${pct}%;${fillStyle}"></div></div>
-          </div>`;
-      }).join('');
-
-      renderArchive();
     }
 
     function renderArchive() {
