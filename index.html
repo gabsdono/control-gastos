@@ -554,9 +554,12 @@
       if (state.archive.length === 0) { card.style.display = 'none'; return; }
       card.style.display = 'block';
       document.getElementById('archiveList').innerHTML = state.archive.slice().reverse().map(a => `
-        <div class="upcoming-row">
-          <span>${escapeHtml(a.label)}</span>
-          <span class="upcoming-when">Ingresos ${money(a.ingresos)} · Gastos ${money(a.gastos)} · Quedó ${money(a.restante)}</span>
+        <div class="list-row">
+          <div class="row-main">
+            <div>${escapeHtml(a.label)}</div>
+            <div class="row-sub">Ingresos ${money(a.ingresos)} · Gastos ${money(a.gastos)} · Quedó ${money(a.restante)}</div>
+          </div>
+          <button class="row-delete" data-action="delete-archive" data-id="${a.id}" aria-label="Eliminar">✕</button>
         </div>`).join('');
     }
 
@@ -742,6 +745,14 @@
       account.startBalance = (account.startBalance || 0) + (target - current);
       save();
       renderAccounts();
+    });
+
+    document.getElementById('archiveList').addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="delete-archive"]');
+      if (!btn) return;
+      state.archive = state.archive.filter(a => a.id !== btn.dataset.id);
+      save();
+      renderArchive();
     });
 
     // Categorías
