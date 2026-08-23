@@ -73,9 +73,19 @@ function stripTime(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+// Saldo de una cuenta (efectivo, banco...) en tiempo real.
+// Solo los movimientos puntuales (no recurrentes) mueven el saldo: un gasto/ingreso
+// recurrente es un plan mensual, no un hecho con fecha concreta, así que no se resta solo.
+function accountBalance(account, movements) {
+  const delta = movements
+    .filter(m => !m.recurring && m.accountId === account.id)
+    .reduce((s, m) => s + (m.kind === 'ingreso' ? m.amount : -m.amount), 0);
+  return (account.startBalance || 0) + delta;
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     budgetLevel, isSameMonth, parseLocalDate, appliesThisMonth,
-    monthlyEquivalent, goalPaid, goalRemaining, goalPercent, nextOccurrence
+    monthlyEquivalent, goalPaid, goalRemaining, goalPercent, nextOccurrence, accountBalance
   };
 }

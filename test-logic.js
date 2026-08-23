@@ -1,7 +1,7 @@
 const assert = require('assert');
 const {
   budgetLevel, isSameMonth, appliesThisMonth, monthlyEquivalent,
-  goalPaid, goalRemaining, goalPercent, nextOccurrence
+  goalPaid, goalRemaining, goalPercent, nextOccurrence, accountBalance
 } = require('./logic.js');
 
 // budgetLevel
@@ -58,5 +58,16 @@ assert.strictEqual(dueNextMonth.getDate(), 15);
 // día 31 en un mes corto se recorta al último día real
 const dueOn31 = nextOccurrence({ recurring: true, frequency: 'monthly', dueDay: 31 }, new Date(2026, 1, 1));
 assert.strictEqual(dueOn31.getMonth(), 1, 'febrero no tiene 31, se recorta dentro del mismo mes');
+
+// accountBalance
+const cash = { id: 'a1', startBalance: 20 };
+const movs = [
+  { recurring: false, accountId: 'a1', kind: 'ingreso', amount: 50 },
+  { recurring: false, accountId: 'a1', kind: 'gasto', amount: 15 },
+  { recurring: false, accountId: 'other', kind: 'gasto', amount: 999 }, // otra cuenta, no cuenta
+  { recurring: true, accountId: 'a1', kind: 'gasto', amount: 999 }, // recurrente, no cuenta
+];
+assert.strictEqual(accountBalance(cash, movs), 55, '20 inicial + 50 ingreso - 15 gasto = 55');
+assert.strictEqual(accountBalance({ id: 'a2', startBalance: 0 }, []), 0);
 
 console.log('OK: logic.js pasó todos los checks');

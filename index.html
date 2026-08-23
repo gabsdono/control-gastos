@@ -106,6 +106,12 @@
   .upcoming-row:last-child { border-bottom: none; }
   .upcoming-when { color: var(--muted); font-size: 13px; }
 
+  .account-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .account-row:last-child { border-bottom: none; }
+  .account-name { font-size: 15px; }
+  .account-balance { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .account-row-right { display: flex; align-items: center; gap: 10px; }
+
   .segmented { display: flex; background: var(--surface-2); border-radius: 10px; padding: 3px; margin-bottom: 14px; }
   .segmented button {
     flex: 1; border: none; background: transparent; padding: 8px; border-radius: 8px;
@@ -203,6 +209,10 @@
         <div class="hero-amount" id="heroAmount">$0.00</div>
         <div id="heroRunwayWrap"></div>
       </div>
+      <div class="card">
+        <h2>Tu dinero</h2>
+        <div id="accountList"></div>
+      </div>
       <div class="stat-pair">
         <div><div class="stat-label">Fijos</div><div class="stat-value" id="sumFixed">$0.00</div><div class="stat-sub" id="sumFixedPct"></div></div>
         <div><div class="stat-label">Variables</div><div class="stat-value" id="sumVariable">$0.00</div></div>
@@ -297,6 +307,9 @@
       <label id="movDateWrap">Fecha
         <input id="movDate" type="date">
       </label>
+      <label id="movAccountWrap">Cuenta
+        <div class="chips" id="movAccountChips"></div>
+      </label>
       <label>Categoría (opcional)
         <div class="chips" id="movCategoryChips"></div>
       </label>
@@ -367,12 +380,12 @@
     function load() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { categories: [], movements: [], goals: [], archive: [] };
+        if (!raw) return { categories: [], movements: [], goals: [], archive: [], accounts: [] };
         const parsed = JSON.parse(raw);
         if (parsed.movements) {
           return {
             categories: parsed.categories || [], movements: parsed.movements || [],
-            goals: parsed.goals || [], archive: parsed.archive || []
+            goals: parsed.goals || [], archive: parsed.archive || [], accounts: parsed.accounts || []
           };
         }
         // migración desde la versión anterior (fijos/variables separados)
@@ -386,9 +399,9 @@
           id: ve.id, name: ve.name, amount: ve.amount, kind: 'gasto',
           recurring: false, date: ve.date, categoryId: ve.categoryId || null
         }));
-        return { categories, movements, goals: [], archive: [] };
+        return { categories, movements, goals: [], archive: [], accounts: [] };
       } catch {
-        return { categories: [], movements: [], goals: [], archive: [] };
+        return { categories: [], movements: [], goals: [], archive: [], accounts: [] };
       }
     }
     function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -409,9 +422,15 @@
 
     let state = load();
     ensureCategoryColors(state.categories);
+    if (state.accounts.length === 0) {
+      state.accounts.push({ id: uid(), name: 'Efectivo', startBalance: 0 });
+      state.accounts.push({ id: uid(), name: 'Cuenta', startBalance: 0 });
+      save();
+    }
     let movementFilter = 'todos';
     let movKind = 'gasto';
     let movCategoryId = null;
+    let movAccountId = null;
     let movFrequency = 'monthly';
     let goalKind = 'deuda';
     let currentGoalId = null;
@@ -453,7 +472,21 @@
       return thisMonthMovements().filter(m => m.kind === 'gasto' && m.categoryId === catId).reduce((s, m) => s + monthlyEquivalent(m), 0);
     }
 
-    function renderAll() { renderDashboard(); renderMovements(); renderGoals(); renderCategories(); }
+    function renderAll() { renderDashboard(); renderMovements(); renderGoals(); renderCategories(); renderAccounts(); }
+
+    function renderAccounts() {
+      document.getElementById('accountList').innerHTML = state.accounts.map(a => {
+        const bal = accountBalance(a, state.movements);
+        return `
+          <div class="account-row">
+            <div class="account-name">${escapeHtml(a.name)}</div>
+            <div class="account-row-right">
+              <div class="account-balance">${money(bal)}</div>
+              <button type="button" class="btn-small" data-action="adjust-account" data-id="${a.id}">Ajustar</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
 
     function renderDashboard() {
       document.getElementById('heroMonth').textContent = 'Este mes';
@@ -687,6 +720,22 @@
       if (m) { m.active = input.checked; save(); renderAll(); }
     });
 
+    // Cuentas (Efectivo / Cuenta / lo que agregues)
+    document.getElementById('accountList').addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="adjust-account"]');
+      if (!btn) return;
+      const account = state.accounts.find(a => a.id === btn.dataset.id);
+      if (!account) return;
+      const current = accountBalance(account, state.movements);
+      const input = prompt(`¿Cuánto tenés ahora en ${account.name}?`, current.toFixed(2));
+      if (input === null) return;
+      const target = parseFloat(input.replace(',', '.'));
+      if (isNaN(target)) return;
+      account.startBalance = (account.startBalance || 0) + (target - current);
+      save();
+      renderAccounts();
+    });
+
     // Categorías
     document.getElementById('categoryList').addEventListener('click', e => {
       const btn = e.target.closest('[data-action="delete-category"]');
@@ -745,6 +794,28 @@
       if (chip) { movCategoryId = chip.dataset.cat || null; populateCategoryChips(); }
     });
 
+    function populateAccountChips() {
+      const wrap = document.getElementById('movAccountChips');
+      wrap.innerHTML =
+        state.accounts.map(a => `<button type="button" class="chip ${movAccountId === a.id ? 'active' : ''}" data-acc="${a.id}">${escapeHtml(a.name)}</button>`).join('') +
+        `<button type="button" class="chip chip-new" id="chipNewAccount">+ Nueva</button>`;
+    }
+    document.getElementById('movAccountChips').addEventListener('click', e => {
+      if (e.target.closest('#chipNewAccount')) {
+        const name = (prompt('Nombre de la nueva cuenta:') || '').trim();
+        if (name) {
+          const existing = state.accounts.find(a => a.name.toLowerCase() === name.toLowerCase());
+          const account = existing || { id: uid(), name, startBalance: 0 };
+          if (!existing) { state.accounts.push(account); save(); }
+          movAccountId = account.id;
+          populateAccountChips();
+        }
+        return;
+      }
+      const chip = e.target.closest('.chip[data-acc]');
+      if (chip) { movAccountId = chip.dataset.acc; populateAccountChips(); }
+    });
+
     document.getElementById('kindToggle').addEventListener('click', e => {
       const btn = e.target.closest('button[data-kind]');
       if (!btn) return;
@@ -774,12 +845,14 @@
       const on = e.target.checked;
       document.getElementById('movRecurringOptions').style.display = on ? 'block' : 'none';
       document.getElementById('movDateWrap').style.display = on ? 'none' : 'block';
+      document.getElementById('movAccountWrap').style.display = on ? 'none' : 'block';
       if (on) populateDueDayOptions(movFrequency);
     });
 
     function openMovementDialog() {
       movKind = movementFilter === 'ingreso' ? 'ingreso' : 'gasto';
       movCategoryId = null;
+      movAccountId = state.accounts[0] ? state.accounts[0].id : null;
       movFrequency = 'monthly';
       document.querySelectorAll('#kindToggle button').forEach(b => b.classList.toggle('active', b.dataset.kind === movKind));
       document.querySelectorAll('#movFrequencyToggle button').forEach(b => b.classList.toggle('active', b.dataset.freq === 'monthly'));
@@ -788,8 +861,10 @@
       document.getElementById('movRecurring').checked = false;
       document.getElementById('movRecurringOptions').style.display = 'none';
       document.getElementById('movDateWrap').style.display = 'block';
+      document.getElementById('movAccountWrap').style.display = 'block';
       document.getElementById('movDate').value = todayISO();
       populateCategoryChips();
+      populateAccountChips();
       document.getElementById('dlgMovement').showModal();
     }
 
@@ -809,6 +884,7 @@
         const date = document.getElementById('movDate').value;
         if (!date) return;
         movement.date = date;
+        movement.accountId = movAccountId;
       }
       state.movements.push(movement);
       save();
