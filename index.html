@@ -455,8 +455,7 @@
     function renderAll() { renderDashboard(); renderMovements(); renderGoals(); renderCategories(); }
 
     function renderDashboard() {
-      const label = new Date().toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
-      document.getElementById('heroMonth').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+      document.getElementById('heroMonth').textContent = 'Este mes';
 
       const ingresos = totalIngresos();
       const gastos = totalGastos();
