@@ -214,6 +214,15 @@
         <h2>Categorías</h2>
         <div id="categoryProgress"></div>
       </div>
+      <div class="card" id="archiveCard" style="display:none;">
+        <h2>Meses anteriores</h2>
+        <div id="archiveList"></div>
+      </div>
+      <div class="card">
+        <h2>Cerrar el mes</h2>
+        <p class="hint" style="margin-top:0;">Guarda un resumen de este mes (para comparar después) y borra los movimientos puntuales para que empieces el próximo mes limpio. Lo fijo/recurrente no se toca.</p>
+        <button type="button" class="btn-small" id="btnCloseMonth">Guardar y empezar de nuevo</button>
+      </div>
     </section>
 
     <section id="tab-movimientos" class="tab">
@@ -357,10 +366,13 @@
     function load() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { categories: [], movements: [], goals: [] };
+        if (!raw) return { categories: [], movements: [], goals: [], archive: [] };
         const parsed = JSON.parse(raw);
         if (parsed.movements) {
-          return { categories: parsed.categories || [], movements: parsed.movements || [], goals: parsed.goals || [] };
+          return {
+            categories: parsed.categories || [], movements: parsed.movements || [],
+            goals: parsed.goals || [], archive: parsed.archive || []
+          };
         }
         // migración desde la versión anterior (fijos/variables separados)
         const categories = parsed.categories || [];
@@ -373,9 +385,9 @@
           id: ve.id, name: ve.name, amount: ve.amount, kind: 'gasto',
           recurring: false, date: ve.date, categoryId: ve.categoryId || null
         }));
-        return { categories, movements, goals: [] };
+        return { categories, movements, goals: [], archive: [] };
       } catch {
-        return { categories: [], movements: [], goals: [] };
+        return { categories: [], movements: [], goals: [], archive: [] };
       }
     }
     function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -488,7 +500,49 @@
             <div class="progress-track"><div class="progress-fill level-${level}" style="width:${pct}%;${fillStyle}"></div></div>
           </div>`;
       }).join('');
+
+      renderArchive();
     }
+
+    function renderArchive() {
+      const card = document.getElementById('archiveCard');
+      if (state.archive.length === 0) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      document.getElementById('archiveList').innerHTML = state.archive.slice().reverse().map(a => `
+        <div class="upcoming-row">
+          <span>${escapeHtml(a.label)}</span>
+          <span class="upcoming-when">Ingresos ${money(a.ingresos)} · Gastos ${money(a.gastos)} · Quedó ${money(a.restante)}</span>
+        </div>`).join('');
+    }
+
+    function closeCurrentMonth() {
+      const now = new Date();
+      const label = now.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
+      const ingresos = totalIngresos();
+      const gastos = totalGastos();
+      const snapshot = {
+        id: uid(),
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+        closedAt: todayISO(),
+        ingresos, gastos,
+        gastosFijos: totalGastosFijos(),
+        gastosVariables: totalGastosVariables(),
+        restante: ingresos - gastos,
+        categorias: state.categories
+          .map(c => ({ name: c.name, color: categoryColor(c), spent: categorySpent(c.id) }))
+          .filter(c => c.spent > 0)
+      };
+      state.archive.push(snapshot);
+      // Se van los movimientos puntuales (con fecha) de este mes; lo recurrente sigue igual el mes que entra.
+      state.movements = state.movements.filter(m => m.recurring || !isSameMonth(m.date, now));
+      save();
+      renderAll();
+    }
+
+    document.getElementById('btnCloseMonth').addEventListener('click', () => {
+      const ok = confirm('Se guarda un resumen de este mes y se borran los ingresos/gastos puntuales ya registrados. Los fijos y recurrentes siguen activos. ¿Continuar?');
+      if (ok) closeCurrentMonth();
+    });
 
     function renderUpcoming() {
       const today = new Date();
