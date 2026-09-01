@@ -51,6 +51,8 @@
     background: var(--accent); color: var(--accent-ink);
     font-family: var(--font-display); font-weight: 700; font-size: 16px;
   }
+  .topbar-settings { margin-left: auto; background: none; border: none; color: var(--muted); padding: 4px; }
+  .topbar-settings svg { width: 22px; height: 22px; display: block; }
   main { padding: 16px 16px 96px; max-width: 560px; margin: 0 auto; }
   .tab { display: none; }
   .tab.active { display: block; }
@@ -201,7 +203,12 @@
 </style>
 </head>
 <body>
-  <header class="topbar"><span class="topbar-mark">$</span><span id="topTitle">Resumen</span></header>
+  <header class="topbar">
+    <span class="topbar-mark">$</span><span id="topTitle">Resumen</span>
+    <button type="button" id="btnSettings" class="topbar-settings" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+    </button>
+  </header>
 
   <main>
     <section id="tab-resumen" class="tab active">
@@ -378,6 +385,39 @@
     </form>
   </dialog>
 
+  <dialog id="dlgSettings">
+    <form id="formSettings">
+      <h2>Moneda</h2>
+      <label>Elegí tu moneda
+        <select id="settingsCurrency">
+          <option value="USD">USD — Dólar (Ecuador, Estados Unidos, Panamá, El Salvador)</option>
+          <option value="EUR">EUR — Euro (Unión Europea)</option>
+          <option value="MXN">MXN — Peso (México)</option>
+          <option value="COP">COP — Peso (Colombia)</option>
+          <option value="PEN">PEN — Sol (Perú)</option>
+          <option value="CLP">CLP — Peso (Chile)</option>
+          <option value="ARS">ARS — Peso (Argentina)</option>
+          <option value="BRL">BRL — Real (Brasil)</option>
+          <option value="BOB">BOB — Boliviano (Bolivia)</option>
+          <option value="UYU">UYU — Peso (Uruguay)</option>
+          <option value="PYG">PYG — Guaraní (Paraguay)</option>
+          <option value="VES">VES — Bolívar (Venezuela)</option>
+          <option value="GTQ">GTQ — Quetzal (Guatemala)</option>
+          <option value="CRC">CRC — Colón (Costa Rica)</option>
+          <option value="HNL">HNL — Lempira (Honduras)</option>
+          <option value="NIO">NIO — Córdoba (Nicaragua)</option>
+          <option value="DOP">DOP — Peso (Rep. Dominicana)</option>
+          <option value="GBP">GBP — Libra (Reino Unido)</option>
+          <option value="CAD">CAD — Dólar (Canadá)</option>
+        </select>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn-secondary" data-close>Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="logic.js"></script>
   <script>
     const STORAGE_KEY = 'controlGastosData';
@@ -385,12 +425,13 @@
     function load() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { categories: [], movements: [], goals: [], archive: [], accounts: [] };
+        if (!raw) return { categories: [], movements: [], goals: [], archive: [], accounts: [], currency: 'USD' };
         const parsed = JSON.parse(raw);
         if (parsed.movements) {
           return {
             categories: parsed.categories || [], movements: parsed.movements || [],
-            goals: parsed.goals || [], archive: parsed.archive || [], accounts: parsed.accounts || []
+            goals: parsed.goals || [], archive: parsed.archive || [], accounts: parsed.accounts || [],
+            currency: parsed.currency || 'USD'
           };
         }
         // migración desde la versión anterior (fijos/variables separados)
@@ -404,9 +445,9 @@
           id: ve.id, name: ve.name, amount: ve.amount, kind: 'gasto',
           recurring: false, date: ve.date, categoryId: ve.categoryId || null
         }));
-        return { categories, movements, goals: [], archive: [], accounts: [] };
+        return { categories, movements, goals: [], archive: [], accounts: [], currency: 'USD' };
       } catch {
-        return { categories: [], movements: [], goals: [], archive: [], accounts: [] };
+        return { categories: [], movements: [], goals: [], archive: [], accounts: [], currency: 'USD' };
       }
     }
     function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -440,8 +481,9 @@
     let goalKind = 'deuda';
     let currentGoalId = null;
 
-    const currency = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' });
-    function money(n) { return currency.format(n || 0); }
+    function money(n) {
+      return new Intl.NumberFormat('es-EC', { style: 'currency', currency: state.currency || 'USD' }).format(n || 0);
+    }
     // El teclado numérico de iOS en es-EC muestra coma decimal; type="number" la rechaza sola.
     // Los montos usan type="text" + este parser para aceptar "12,50" igual que "12.50".
     function parseAmount(str) { return parseFloat(String(str).trim().replace(',', '.')); }
@@ -787,6 +829,19 @@
 
     // Diálogos: cerrar
     document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => btn.closest('dialog').close()));
+
+    // Ajustes: moneda
+    document.getElementById('btnSettings').addEventListener('click', () => {
+      document.getElementById('settingsCurrency').value = state.currency || 'USD';
+      document.getElementById('dlgSettings').showModal();
+    });
+    document.getElementById('formSettings').addEventListener('submit', e => {
+      e.preventDefault();
+      state.currency = document.getElementById('settingsCurrency').value;
+      save();
+      document.getElementById('dlgSettings').close();
+      renderAll();
+    });
 
     // Diálogo: nuevo movimiento
     function populateCategoryChips() {
