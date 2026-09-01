@@ -482,8 +482,19 @@
     let goalKind = 'deuda';
     let currentGoalId = null;
 
+    // El locale 'es-EC' solo tiene símbolo propio para USD (su moneda); para el resto
+    // muestra el código ISO (ej. "EUR 10,00"). Usando el locale nativo de cada moneda
+    // se obtiene su símbolo real (€, S/, R$, ₩...), como pasa con el $ de USD.
+    const CURRENCY_LOCALE = {
+      USD: 'es-EC', EUR: 'es-ES', MXN: 'es-MX', COP: 'es-CO', PEN: 'es-PE', CLP: 'es-CL',
+      ARS: 'es-AR', BRL: 'pt-BR', BOB: 'es-BO', UYU: 'es-UY', PYG: 'es-PY', VES: 'es-VE',
+      GTQ: 'es-GT', CRC: 'es-CR', HNL: 'es-HN', NIO: 'es-NI', DOP: 'es-DO',
+      GBP: 'en-GB', CAD: 'en-CA', KRW: 'ko-KR'
+    };
     function money(n) {
-      return new Intl.NumberFormat('es-EC', { style: 'currency', currency: state.currency || 'USD' }).format(n || 0);
+      const code = state.currency || 'USD';
+      const locale = CURRENCY_LOCALE[code] || 'es-EC';
+      return new Intl.NumberFormat(locale, { style: 'currency', currency: code }).format(n || 0);
     }
     // El teclado numérico de iOS en es-EC muestra coma decimal; type="number" la rechaza sola.
     // Los montos usan type="text" + este parser para aceptar "12,50" igual que "12.50".
