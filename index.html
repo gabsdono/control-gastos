@@ -128,6 +128,11 @@
   .list-row:last-child { border-bottom: none; }
   .row-main { flex: 1; min-width: 0; }
   .row-main.editable { cursor: pointer; }
+  .reorder-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .reorder-btns button {
+    border: none; background: var(--surface-2); color: var(--muted);
+    width: 22px; height: 18px; font-size: 9px; line-height: 1; border-radius: 4px; padding: 0;
+  }
   .row-main > div:first-child { font-size: 16px; }
   .row-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
   .row-amount { font-variant-numeric: tabular-nums; font-size: 16px; white-space: nowrap; color: var(--text); }
@@ -687,8 +692,15 @@
       const toggle = m.recurring
         ? `<label class="switch"><input type="checkbox" ${m.active !== false ? 'checked' : ''} data-action="toggle-recurring" data-id="${m.id}"><span></span></label>`
         : '';
+      const reorder = m.recurring
+        ? `<div class="reorder-btns">
+             <button type="button" data-action="move-up" data-id="${m.id}" aria-label="Subir">▲</button>
+             <button type="button" data-action="move-down" data-id="${m.id}" aria-label="Bajar">▼</button>
+           </div>`
+        : '';
       return `
         <div class="list-row">
+          ${reorder}
           ${toggle}
           <div class="row-main editable" data-action="edit-movement" data-id="${m.id}">
             <div>${escapeHtml(m.name)}</div>
@@ -697,6 +709,19 @@
           <div class="row-amount ${signClass}">${sign}${money(m.amount)}</div>
           <button class="row-delete" data-action="delete-movement" data-id="${m.id}" aria-label="Eliminar">✕</button>
         </div>`;
+    }
+
+    function moveRecurring(id, direction) {
+      const order = state.movements.filter(m => m.recurring).map(m => m.id);
+      const pos = order.indexOf(id);
+      const swapPos = pos + direction;
+      if (pos === -1 || swapPos < 0 || swapPos >= order.length) return;
+      const otherId = order[swapPos];
+      const idxA = state.movements.findIndex(m => m.id === id);
+      const idxB = state.movements.findIndex(m => m.id === otherId);
+      [state.movements[idxA], state.movements[idxB]] = [state.movements[idxB], state.movements[idxA]];
+      save();
+      renderMovements();
     }
 
     function renderMovements() {
@@ -795,7 +820,12 @@
       if (edit) {
         const m = state.movements.find(x => x.id === edit.dataset.id);
         if (m) openMovementDialog(m);
+        return;
       }
+      const up = e.target.closest('[data-action="move-up"]');
+      if (up) { moveRecurring(up.dataset.id, -1); return; }
+      const down = e.target.closest('[data-action="move-down"]');
+      if (down) { moveRecurring(down.dataset.id, 1); }
     });
     document.getElementById('movementList').addEventListener('change', e => {
       const input = e.target.closest('[data-action="toggle-recurring"]');
