@@ -127,6 +127,7 @@
   .list-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
   .list-row:last-child { border-bottom: none; }
   .row-main { flex: 1; min-width: 0; }
+  .row-main.editable { cursor: pointer; }
   .row-main > div:first-child { font-size: 16px; }
   .row-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
   .row-amount { font-variant-numeric: tabular-nums; font-size: 16px; white-space: nowrap; color: var(--text); }
@@ -287,7 +288,7 @@
 
   <dialog id="dlgMovement">
     <form id="formMovement">
-      <h2>Nuevo movimiento</h2>
+      <h2 id="dlgMovementTitle">Nuevo movimiento</h2>
       <div class="segmented" id="kindToggle">
         <button type="button" data-kind="gasto" class="active">Gasto</button>
         <button type="button" data-kind="ingreso">Ingreso</button>
@@ -481,6 +482,7 @@
     let movFrequency = 'monthly';
     let goalKind = 'deuda';
     let currentGoalId = null;
+    let editingEntryId = null;
 
     // El locale 'es-EC' solo tiene símbolo propio para USD (su moneda); para el resto
     // muestra el código ISO (ej. "EUR 10,00"). Usando el locale nativo de cada moneda
@@ -688,7 +690,7 @@
       return `
         <div class="list-row">
           ${toggle}
-          <div class="row-main">
+          <div class="row-main editable" data-action="edit-movement" data-id="${m.id}">
             <div>${escapeHtml(m.name)}</div>
             <div class="row-sub">${movementSubLabel(m)}</div>
           </div>
@@ -737,6 +739,18 @@
         const pct = goalPercent(g);
         const paidLabel = g.kind === 'ahorro' ? 'Ahorrado' : 'Pagado';
         const actionLabel = g.kind === 'ahorro' ? '+ Registrar ahorro' : '+ Registrar pago';
+        const entries = (g.entries || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+        const entriesHtml = entries.length ? `
+          <div class="section-label" style="margin-top:14px;">Movimientos</div>
+          ${entries.map(en => `
+            <div class="list-row">
+              <div class="row-main editable" data-action="edit-entry" data-goal="${g.id}" data-entry="${en.id}">
+                <div>${money(en.amount)}</div>
+                <div class="row-sub">${formatDate(en.date)}</div>
+              </div>
+              <button class="row-delete" data-action="delete-entry" data-goal="${g.id}" data-entry="${en.id}" aria-label="Eliminar">✕</button>
+            </div>`).join('')}
+        ` : '';
         return `
           <div class="goal-card">
             <button class="row-delete" style="position:absolute;top:14px;right:14px;" data-action="delete-goal" data-id="${g.id}" aria-label="Eliminar">✕</button>
@@ -751,6 +765,7 @@
             <div class="goal-actions">
               <button type="button" class="btn-small" data-action="add-entry" data-id="${g.id}">${actionLabel}</button>
             </div>
+            ${entriesHtml}
           </div>`;
       }).join('');
     }
@@ -775,7 +790,12 @@
     });
     document.getElementById('movementList').addEventListener('click', e => {
       const del = e.target.closest('[data-action="delete-movement"]');
-      if (del) { state.movements = state.movements.filter(m => m.id !== del.dataset.id); save(); renderAll(); }
+      if (del) { state.movements = state.movements.filter(m => m.id !== del.dataset.id); save(); renderAll(); return; }
+      const edit = e.target.closest('[data-action="edit-movement"]');
+      if (edit) {
+        const m = state.movements.find(x => x.id === edit.dataset.id);
+        if (m) openMovementDialog(m);
+      }
     });
     document.getElementById('movementList').addEventListener('change', e => {
       const input = e.target.closest('[data-action="toggle-recurring"]');
@@ -828,14 +848,26 @@
     document.getElementById('goalList').addEventListener('click', e => {
       const del = e.target.closest('[data-action="delete-goal"]');
       if (del) { state.goals = state.goals.filter(g => g.id !== del.dataset.id); save(); renderGoals(); return; }
+
+      const delEntry = e.target.closest('[data-action="delete-entry"]');
+      if (delEntry) {
+        const g = state.goals.find(x => x.id === delEntry.dataset.goal);
+        if (g) { g.entries = (g.entries || []).filter(en => en.id !== delEntry.dataset.entry); save(); renderGoals(); }
+        return;
+      }
+
+      const editEntry = e.target.closest('[data-action="edit-entry"]');
+      if (editEntry) {
+        const g = state.goals.find(x => x.id === editEntry.dataset.goal);
+        const en = g && (g.entries || []).find(x => x.id === editEntry.dataset.entry);
+        if (g && en) openGoalEntryDialog(g, en);
+        return;
+      }
+
       const add = e.target.closest('[data-action="add-entry"]');
       if (add) {
-        currentGoalId = add.dataset.id;
-        const g = state.goals.find(x => x.id === currentGoalId);
-        document.getElementById('goalEntryTitle').textContent = g.kind === 'ahorro' ? 'Registrar ahorro' : 'Registrar pago';
-        document.getElementById('goalEntryAmount').value = '';
-        document.getElementById('goalEntryDate').value = todayISO();
-        document.getElementById('dlgGoalEntry').showModal();
+        const g = state.goals.find(x => x.id === add.dataset.id);
+        if (g) openGoalEntryDialog(g, null);
       }
     });
 
@@ -934,20 +966,30 @@
       if (on) populateDueDayOptions(movFrequency);
     });
 
-    function openMovementDialog() {
-      movKind = movementFilter === 'ingreso' ? 'ingreso' : 'gasto';
-      movCategoryId = null;
-      movAccountId = state.accounts[0] ? state.accounts[0].id : null;
-      movFrequency = 'monthly';
+    let editingMovementId = null;
+
+    function openMovementDialog(existing) {
+      editingMovementId = existing ? existing.id : null;
+      const recurring = existing ? !!existing.recurring : false;
+      movKind = existing ? existing.kind : (movementFilter === 'ingreso' ? 'ingreso' : 'gasto');
+      movCategoryId = existing ? (existing.categoryId || null) : null;
+      movAccountId = existing ? (existing.accountId || null) : (state.accounts[0] ? state.accounts[0].id : null);
+      movFrequency = existing && existing.frequency ? existing.frequency : 'monthly';
+
+      document.getElementById('dlgMovementTitle').textContent = existing ? 'Editar movimiento' : 'Nuevo movimiento';
       document.querySelectorAll('#kindToggle button').forEach(b => b.classList.toggle('active', b.dataset.kind === movKind));
-      document.querySelectorAll('#movFrequencyToggle button').forEach(b => b.classList.toggle('active', b.dataset.freq === 'monthly'));
-      document.getElementById('movName').value = '';
-      document.getElementById('movAmount').value = '';
-      document.getElementById('movRecurring').checked = false;
-      document.getElementById('movRecurringOptions').style.display = 'none';
-      document.getElementById('movDateWrap').style.display = 'block';
-      document.getElementById('movAccountWrap').style.display = 'block';
-      document.getElementById('movDate').value = todayISO();
+      document.querySelectorAll('#movFrequencyToggle button').forEach(b => b.classList.toggle('active', b.dataset.freq === movFrequency));
+      document.getElementById('movName').value = existing ? existing.name : '';
+      document.getElementById('movAmount').value = existing ? String(existing.amount) : '';
+      document.getElementById('movRecurring').checked = recurring;
+      document.getElementById('movRecurringOptions').style.display = recurring ? 'block' : 'none';
+      document.getElementById('movDateWrap').style.display = recurring ? 'none' : 'block';
+      document.getElementById('movAccountWrap').style.display = recurring ? 'none' : 'block';
+      if (recurring) {
+        populateDueDayOptions(movFrequency);
+        document.getElementById('movDueDay').value = existing.dueDay !== null && existing.dueDay !== undefined ? String(existing.dueDay) : '';
+      }
+      document.getElementById('movDate').value = existing && existing.date ? existing.date : todayISO();
       populateCategoryChips();
       populateAccountChips();
       document.getElementById('dlgMovement').showModal();
@@ -959,19 +1001,33 @@
       const amount = parseAmount(document.getElementById('movAmount').value);
       if (!name || isNaN(amount) || amount <= 0) return;
       const recurring = document.getElementById('movRecurring').checked;
-      const movement = { id: uid(), name, amount, kind: movKind, recurring, categoryId: movCategoryId };
+
+      const movement = editingMovementId ? state.movements.find(m => m.id === editingMovementId) : { id: uid() };
+      if (!movement) return;
+
+      movement.name = name;
+      movement.amount = amount;
+      movement.kind = movKind;
+      movement.recurring = recurring;
+      movement.categoryId = movCategoryId;
       if (recurring) {
-        movement.active = true;
+        movement.active = movement.active !== false;
         movement.frequency = movFrequency;
         const dueVal = document.getElementById('movDueDay').value;
         movement.dueDay = dueVal === '' ? null : parseInt(dueVal, 10);
+        delete movement.date;
+        delete movement.accountId;
       } else {
         const date = document.getElementById('movDate').value;
         if (!date) return;
         movement.date = date;
         movement.accountId = movAccountId;
+        delete movement.active;
+        delete movement.frequency;
+        delete movement.dueDay;
       }
-      state.movements.push(movement);
+      if (!editingMovementId) state.movements.push(movement);
+      editingMovementId = null;
       save();
       document.getElementById('dlgMovement').close();
       renderAll();
@@ -1019,6 +1075,17 @@
     });
 
     // Diálogo: registrar pago/ahorro
+    function openGoalEntryDialog(goal, entry) {
+      currentGoalId = goal.id;
+      editingEntryId = entry ? entry.id : null;
+      document.getElementById('goalEntryTitle').textContent = entry
+        ? (goal.kind === 'ahorro' ? 'Editar ahorro' : 'Editar pago')
+        : (goal.kind === 'ahorro' ? 'Registrar ahorro' : 'Registrar pago');
+      document.getElementById('goalEntryAmount').value = entry ? String(entry.amount) : '';
+      document.getElementById('goalEntryDate').value = entry ? entry.date : todayISO();
+      document.getElementById('dlgGoalEntry').showModal();
+    }
+
     document.getElementById('formGoalEntry').addEventListener('submit', e => {
       e.preventDefault();
       const amount = parseAmount(document.getElementById('goalEntryAmount').value);
@@ -1027,7 +1094,13 @@
       const g = state.goals.find(x => x.id === currentGoalId);
       if (!g) return;
       g.entries = g.entries || [];
-      g.entries.push({ id: uid(), amount, date });
+      if (editingEntryId) {
+        const en = g.entries.find(x => x.id === editingEntryId);
+        if (en) { en.amount = amount; en.date = date; }
+      } else {
+        g.entries.push({ id: uid(), amount, date });
+      }
+      editingEntryId = null;
       save();
       document.getElementById('dlgGoalEntry').close();
       renderGoals();
