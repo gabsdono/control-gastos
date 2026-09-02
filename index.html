@@ -540,6 +540,9 @@
     function categorySpent(catId) {
       return thisMonthMovements().filter(m => m.kind === 'gasto' && m.categoryId === catId).reduce((s, m) => s + monthlyEquivalent(m), 0);
     }
+    function totalAccountBalances() {
+      return state.accounts.reduce((s, a) => s + accountBalance(a, state.movements), 0);
+    }
 
     function renderAll() { renderDashboard(); renderMovements(); renderGoals(); renderCategories(); renderAccounts(); }
 
@@ -560,22 +563,24 @@
     function renderDashboard() {
       document.getElementById('heroMonth').textContent = 'Este mes';
 
+      const cuentas = totalAccountBalances();
       const ingresos = totalIngresos();
       const gastos = totalGastos();
-      const restante = ingresos - gastos;
+      const restante = cuentas + ingresos - gastos;
       const heroEl = document.getElementById('heroAmount');
       heroEl.textContent = money(restante);
-      heroEl.className = 'hero-amount' + (ingresos <= 0 ? ' level-empty' : ' level-' + budgetLevel(gastos, ingresos));
+      const level = restante < 0 ? 'over' : (ingresos > 0 ? budgetLevel(gastos, ingresos) : 'empty');
+      heroEl.className = 'hero-amount level-' + level;
 
       const runwayWrap = document.getElementById('heroRunwayWrap');
       if (ingresos > 0) {
-        const level = budgetLevel(gastos, ingresos);
+        const barLevel = budgetLevel(gastos, ingresos);
         const pct = Math.min(gastos / ingresos, 1) * 100;
         runwayWrap.innerHTML = `
-          <div class="runway"><div class="runway-fill level-${level}" style="width:${pct}%"></div></div>
-          <div class="runway-labels"><span>Gastado ${money(gastos)}</span><span>Ingresos ${money(ingresos)}</span></div>`;
+          <div class="runway"><div class="runway-fill level-${barLevel}" style="width:${pct}%"></div></div>
+          <div class="runway-labels"><span>Cuentas ${money(cuentas)}</span><span>+ Ingresos ${money(ingresos)}</span><span>− Gastos ${money(gastos)}</span></div>`;
       } else {
-        runwayWrap.innerHTML = `<p class="hint">Agregá tus ingresos del mes tocando + para ver cuánto te queda.</p>`;
+        runwayWrap.innerHTML = `<p class="hint">Cuentas ${money(cuentas)}. Agregá tus ingresos del mes tocando + para comparar cuánto entra vs. cuánto gastás.</p>`;
       }
 
       const fijos = totalGastosFijos();
@@ -674,6 +679,8 @@
     function movementSubLabel(m) {
       const cat = state.categories.find(c => c.id === m.categoryId);
       const catLabel = cat ? `<span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}` : '';
+      const account = state.accounts.find(a => a.id === m.accountId);
+      const accLabel = account ? escapeHtml(account.name) : '';
       if (m.recurring) {
         const freqLabel = m.frequency === 'weekly' ? 'Cada semana' : 'Cada mes';
         let due = '';
@@ -681,9 +688,11 @@
           const dayNames = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
           due = m.frequency === 'weekly' ? ` · vence ${dayNames[m.dueDay]}` : ` · vence el ${m.dueDay}`;
         }
-        return `${freqLabel}${due}${cat ? ' · ' + catLabel : ''}`;
+        const extra = [accLabel, cat ? catLabel : ''].filter(Boolean).join(' · ');
+        return `${freqLabel}${due}${extra ? ' · ' + extra : ''}`;
       }
-      return `${cat ? catLabel + ' · ' : ''}${formatDate(m.date)}`;
+      const extra = [accLabel, cat ? catLabel : ''].filter(Boolean).join(' · ');
+      return `${extra ? extra + ' · ' : ''}${formatDate(m.date)}`;
     }
 
     function renderMovementRow(m) {
@@ -992,7 +1001,6 @@
       const on = e.target.checked;
       document.getElementById('movRecurringOptions').style.display = on ? 'block' : 'none';
       document.getElementById('movDateWrap').style.display = on ? 'none' : 'block';
-      document.getElementById('movAccountWrap').style.display = on ? 'none' : 'block';
       if (on) populateDueDayOptions(movFrequency);
     });
 
@@ -1014,7 +1022,6 @@
       document.getElementById('movRecurring').checked = recurring;
       document.getElementById('movRecurringOptions').style.display = recurring ? 'block' : 'none';
       document.getElementById('movDateWrap').style.display = recurring ? 'none' : 'block';
-      document.getElementById('movAccountWrap').style.display = recurring ? 'none' : 'block';
       if (recurring) {
         populateDueDayOptions(movFrequency);
         document.getElementById('movDueDay').value = existing.dueDay !== null && existing.dueDay !== undefined ? String(existing.dueDay) : '';
@@ -1045,8 +1052,8 @@
         movement.frequency = movFrequency;
         const dueVal = document.getElementById('movDueDay').value;
         movement.dueDay = dueVal === '' ? null : parseInt(dueVal, 10);
+        movement.accountId = movAccountId;
         delete movement.date;
-        delete movement.accountId;
       } else {
         const date = document.getElementById('movDate').value;
         if (!date) return;
