@@ -139,6 +139,12 @@
   .goal-actions { margin-top: 14px; display: flex; justify-content: flex-end; }
   .btn-small { padding: 8px 14px; border-radius: 10px; border: none; background: var(--surface-2); color: var(--text); font-size: 13px; font-weight: 600; font-family: inherit; }
 
+  .vbar-chart { display: flex; align-items: stretch; gap: 10px; height: 190px; padding: 4px 2px 0; overflow-x: auto; }
+  .vbar-col { display: flex; flex-direction: column; align-items: center; flex: 1 0 44px; min-width: 44px; }
+  .vbar-value { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .vbar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+  .vbar-fill { width: 60%; max-width: 34px; border-radius: 6px 6px 2px 2px; }
+  .vbar-name { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin-top: 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pie-wrap { display: flex; justify-content: center; padding: 8px 0 20px; }
   .pie-circle { width: 160px; height: 160px; border-radius: 50%; flex-shrink: 0; }
   .pie-legend-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; font-size: 14px; border-bottom: 1px solid var(--border); }
@@ -991,14 +997,12 @@
       const el = document.getElementById('barChart');
       if (data.length === 0) { el.innerHTML = emptyMsg('Todavía no hay gastos este mes.'); return; }
       const max = Math.max(...data.map(x => x.spent));
-      el.innerHTML = data.map(({ cat, spent }) => `
-        <div class="progress-row">
-          <div class="progress-head">
-            <span><span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}</span>
-            <span>${money(spent)}</span>
-          </div>
-          <div class="progress-track"><div class="progress-fill" style="width:${(spent / max) * 100}%;background:${categoryColor(cat)};"></div></div>
-        </div>`).join('');
+      el.innerHTML = `<div class="vbar-chart">` + data.map(({ cat, spent }) => `
+        <div class="vbar-col">
+          <div class="vbar-value">${money(spent)}</div>
+          <div class="vbar-track"><div class="vbar-fill" style="height:${Math.max((spent / max) * 100, 3)}%;background:${categoryColor(cat)};"></div></div>
+          <div class="vbar-name"><span class="cat-dot" style="background:${categoryColor(cat)}"></span>${escapeHtml(cat.name)}</div>
+        </div>`).join('') + `</div>`;
     }
 
     function renderPieChart() {
