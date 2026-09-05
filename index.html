@@ -690,6 +690,7 @@
       state.archive = state.archive.filter(a => a.id !== btn.dataset.id);
       save();
       renderArchive();
+      renderLineChart();
     });
 
     // ---------- Recordatorios ----------
@@ -1080,10 +1081,19 @@
     function renderLineChart() {
       const el = document.getElementById('lineChart');
       const points = state.archive;
-      if (points.length < 2) {
-        el.innerHTML = emptyMsg(points.length === 0
-          ? 'Todavía no tenés historial. Cuando cierres un mes, va a aparecer acá.'
-          : 'Necesitás cerrar al menos dos meses para ver la tendencia.');
+      if (points.length === 0) {
+        el.innerHTML = emptyMsg('Todavía no tenés historial. Guardá el resumen del mes y va a aparecer acá.');
+        return;
+      }
+      if (points.length === 1) {
+        el.innerHTML = `
+          <div class="pie-wrap" style="padding:20px 0 8px;">
+            <div style="text-align:center;">
+              <div class="hero-label" style="margin-top:0;">${escapeHtml(points[0].label)}</div>
+              <div class="hero-amount" style="font-size:32px;">${money(points[0].restante)}</div>
+            </div>
+          </div>
+          <p class="empty" style="padding-top:0;">Guardá otro mes para ver la tendencia en una línea.</p>`;
         return;
       }
       const values = points.map(p => p.restante);
