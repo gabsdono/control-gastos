@@ -25,6 +25,15 @@ function stripTime(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+// Lunes de la semana que contiene `date` (semana lunes-domingo).
+function startOfWeek(date) {
+  const d = stripTime(date);
+  const day = d.getDay(); // 0=domingo..6=sábado
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
 // Próxima fecha en que vence un recordatorio mensual (dueDay = día del mes, 1-31,
 // se recorta al último día real del mes si hace falta).
 function nextReminderDate(dueDay, today) {
@@ -57,6 +66,6 @@ function accountBalance(account, movements) {
 if (typeof module !== 'undefined') {
   module.exports = {
     parseLocalDate, isSameMonth, goalPaid, goalRemaining, goalPercent,
-    nextReminderDate, accountBalance
+    nextReminderDate, accountBalance, startOfWeek
   };
 }

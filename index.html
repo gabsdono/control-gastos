@@ -767,13 +767,32 @@
         </div>`;
     }
 
+    function weekLabel(monday) {
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      const fmt = d => d.toLocaleDateString('es-EC', { day: 'numeric', month: 'short' });
+      return `Semana del ${fmt(monday)} al ${fmt(sunday)}`;
+    }
+
     function renderMovements() {
       document.querySelectorAll('#movementFilters button').forEach(b => b.classList.toggle('active', b.dataset.filter === movementFilter));
       const matches = m => movementFilter === 'todos' || m.kind === movementFilter;
       const items = state.movements.filter(matches).slice().sort((a, b) => b.date.localeCompare(a.date));
-      document.getElementById('movementList').innerHTML = items.length
-        ? items.map(renderMovementRow).join('')
-        : emptyMsg('Sin movimientos todavía. Tocá + para agregar un ingreso o un gasto.');
+      const list = document.getElementById('movementList');
+      if (items.length === 0) { list.innerHTML = emptyMsg('Sin movimientos todavía. Tocá + para agregar un ingreso o un gasto.'); return; }
+
+      // Agrupados por semana (lunes a domingo) para no ver todo en una sola bola.
+      let html = '';
+      let currentWeek = null;
+      items.forEach(m => {
+        const monday = startOfWeek(parseLocalDate(m.date));
+        if (currentWeek === null || monday.getTime() !== currentWeek.getTime()) {
+          currentWeek = monday;
+          html += `<div class="section-label">${weekLabel(monday)}</div>`;
+        }
+        html += renderMovementRow(m);
+      });
+      list.innerHTML = html;
     }
 
     document.getElementById('movementFilters').addEventListener('click', e => {
@@ -824,21 +843,25 @@
       if (chip) { movAccountId = chip.dataset.acc; populateAccountChips(); }
     });
 
+    // Cada selector excluye la cuenta elegida en el otro, así nunca se puede armar
+    // una transferencia de una cuenta a sí misma (eso quedaba guardado sin avisar nada).
     function populateFromChips() {
       const wrap = document.getElementById('movFromChips');
-      wrap.innerHTML = state.accounts.map(a => `<button type="button" class="chip ${movFromAccountId === a.id ? 'active' : ''}" data-acc="${a.id}">${escapeHtml(a.name)}</button>`).join('');
+      wrap.innerHTML = state.accounts.filter(a => a.id !== movToAccountId)
+        .map(a => `<button type="button" class="chip ${movFromAccountId === a.id ? 'active' : ''}" data-acc="${a.id}">${escapeHtml(a.name)}</button>`).join('');
     }
     function populateToChips() {
       const wrap = document.getElementById('movToChips');
-      wrap.innerHTML = state.accounts.map(a => `<button type="button" class="chip ${movToAccountId === a.id ? 'active' : ''}" data-acc="${a.id}">${escapeHtml(a.name)}</button>`).join('');
+      wrap.innerHTML = state.accounts.filter(a => a.id !== movFromAccountId)
+        .map(a => `<button type="button" class="chip ${movToAccountId === a.id ? 'active' : ''}" data-acc="${a.id}">${escapeHtml(a.name)}</button>`).join('');
     }
     document.getElementById('movFromChips').addEventListener('click', e => {
       const chip = e.target.closest('.chip[data-acc]');
-      if (chip) { movFromAccountId = chip.dataset.acc; populateFromChips(); }
+      if (chip) { movFromAccountId = chip.dataset.acc; populateFromChips(); populateToChips(); }
     });
     document.getElementById('movToChips').addEventListener('click', e => {
       const chip = e.target.closest('.chip[data-acc]');
-      if (chip) { movToAccountId = chip.dataset.acc; populateToChips(); }
+      if (chip) { movToAccountId = chip.dataset.acc; populateFromChips(); populateToChips(); }
     });
 
     function applyMovementKindVisibility() {

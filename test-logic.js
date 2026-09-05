@@ -1,6 +1,6 @@
 const assert = require('assert');
 const {
-  isSameMonth, goalPaid, goalRemaining, goalPercent, nextReminderDate, accountBalance
+  isSameMonth, goalPaid, goalRemaining, goalPercent, nextReminderDate, accountBalance, startOfWeek
 } = require('./logic.js');
 
 // isSameMonth (timezone-safe)
@@ -49,6 +49,24 @@ assert.strictEqual(
   accountBalance(efectivo, withTransfer) + accountBalance(tarjeta, withTransfer),
   efectivo.startBalance + tarjeta.startBalance,
   'el total combinado no cambia con una transferencia'
+);
+
+// startOfWeek (semana lunes-domingo)
+assert.deepStrictEqual(
+  [startOfWeek(new Date(2026, 8, 7)).getMonth(), startOfWeek(new Date(2026, 8, 7)).getDate()],
+  [8, 7], '7 de sept 2026 es lunes, es el inicio de su propia semana'
+);
+assert.deepStrictEqual(
+  [startOfWeek(new Date(2026, 8, 10)).getMonth(), startOfWeek(new Date(2026, 8, 10)).getDate()],
+  [8, 7], 'jueves 10 cae en la semana que empezó el lunes 7'
+);
+assert.deepStrictEqual(
+  [startOfWeek(new Date(2026, 8, 13)).getMonth(), startOfWeek(new Date(2026, 8, 13)).getDate()],
+  [8, 7], 'domingo 13 sigue siendo parte de la semana que empezó el lunes 7'
+);
+assert.deepStrictEqual(
+  [startOfWeek(new Date(2026, 8, 14)).getMonth(), startOfWeek(new Date(2026, 8, 14)).getDate()],
+  [8, 14], 'lunes 14 ya es la semana siguiente'
 );
 
 console.log('OK: logic.js pasó todos los checks');
