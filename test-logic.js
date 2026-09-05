@@ -37,4 +37,18 @@ const movs = [
 assert.strictEqual(accountBalance(cash, movs), 55, '20 inicial + 50 ingreso - 15 gasto = 55');
 assert.strictEqual(accountBalance({ id: 'a2', startBalance: 0 }, []), 0);
 
+// accountBalance con transferencias: mueve plata entre cuentas sin ser ingreso/gasto real
+const efectivo = { id: 'efectivo', startBalance: 100 };
+const tarjeta = { id: 'tarjeta', startBalance: 50 };
+const withTransfer = [
+  { kind: 'transferencia', amount: 30, fromAccountId: 'tarjeta', toAccountId: 'efectivo' }
+];
+assert.strictEqual(accountBalance(efectivo, withTransfer), 130, 'efectivo recibe la transferencia: 100 + 30');
+assert.strictEqual(accountBalance(tarjeta, withTransfer), 20, 'tarjeta la pierde: 50 - 30');
+assert.strictEqual(
+  accountBalance(efectivo, withTransfer) + accountBalance(tarjeta, withTransfer),
+  efectivo.startBalance + tarjeta.startBalance,
+  'el total combinado no cambia con una transferencia'
+);
+
 console.log('OK: logic.js pasó todos los checks');

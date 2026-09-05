@@ -39,12 +39,18 @@ function nextReminderDate(dueDay, today) {
 }
 
 // Saldo de una cuenta (efectivo, tarjeta...) = saldo inicial + todo lo que entró/salió
-// de esa cuenta. Todos los movimientos tienen fecha (ya no hay "recurrentes" que
-// contar aparte), así que es una suma directa.
+// de esa cuenta. Una transferencia mueve plata entre dos cuentas propias (resta de una,
+// suma a la otra) sin ser ingreso ni gasto real, así que no toca el total combinado.
 function accountBalance(account, movements) {
-  const delta = movements
-    .filter(m => m.accountId === account.id)
-    .reduce((s, m) => s + (m.kind === 'ingreso' ? m.amount : -m.amount), 0);
+  const delta = movements.reduce((s, m) => {
+    if (m.kind === 'transferencia') {
+      if (m.fromAccountId === account.id) return s - m.amount;
+      if (m.toAccountId === account.id) return s + m.amount;
+      return s;
+    }
+    if (m.accountId !== account.id) return s;
+    return s + (m.kind === 'ingreso' ? m.amount : -m.amount);
+  }, 0);
   return (account.startBalance || 0) + delta;
 }
 
