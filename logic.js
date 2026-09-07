@@ -50,8 +50,11 @@ function nextReminderDate(dueDay, today) {
 // Saldo de una cuenta (efectivo, tarjeta...) = saldo inicial + todo lo que entró/salió
 // de esa cuenta. Una transferencia mueve plata entre dos cuentas propias (resta de una,
 // suma a la otra) sin ser ingreso ni gasto real, así que no toca el total combinado.
+// Un movimiento "pendiente" (settled === false) todavía no es plata real movida —
+// se ve en Ingresos/Gastos del mes como plan, pero no descuenta del saldo real.
 function accountBalance(account, movements) {
   const delta = movements.reduce((s, m) => {
+    if (m.settled === false) return s;
     if (m.kind === 'transferencia') {
       if (m.fromAccountId === account.id) return s - m.amount;
       if (m.toAccountId === account.id) return s + m.amount;

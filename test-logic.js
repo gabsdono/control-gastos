@@ -51,6 +51,14 @@ assert.strictEqual(
   'el total combinado no cambia con una transferencia'
 );
 
+// accountBalance con movimientos pendientes: no descuentan del saldo real todavía
+const pendingMovs = [
+  { accountId: 'a1', kind: 'ingreso', amount: 50 },
+  { accountId: 'a1', kind: 'gasto', amount: 15, settled: false }, // pendiente, no cuenta
+  { accountId: 'a1', kind: 'gasto', amount: 5 }, // sin "settled" = ya pasó, por defecto
+];
+assert.strictEqual(accountBalance(cash, pendingMovs), 20 + 50 - 5, 'lo pendiente no se resta del saldo real');
+
 
 // startOfWeek (semana lunes-domingo)
 assert.deepStrictEqual(

@@ -134,6 +134,8 @@
   .switch input:checked + span { background: var(--ok); border-color: var(--ok); }
   .switch input:checked + span::before { transform: translateX(18px); }
   .sim-total { font-size: 32px; }
+  .pending-badge { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; color: var(--muted); background: var(--surface-2); padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
+  .row-amount.pending { opacity: 0.55; }
   .field-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 
   .goal-card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
@@ -230,7 +232,14 @@
       <div class="card">
         <h2>Simulador</h2>
         <p class="hint-small" style="margin:0 0 10px;">Probá números hipotéticos sin que afecten tus movimientos ni tu saldo real.</p>
-        <div class="hero-label" style="margin-top:0;">Tu saldo real + esto</div>
+        <div class="field-group">
+          <div class="field-label">Saldo inicial supuesto (editable)</div>
+          <div class="new-category-row" style="margin-top:0;">
+            <input id="simBaseInput" type="text" inputmode="decimal">
+            <button type="button" class="btn-small" id="btnResetSimBase" style="width:auto;">Usar real</button>
+          </div>
+        </div>
+        <div class="hero-label" style="margin-top:0;">Total simulado</div>
         <div class="hero-amount sim-total" id="simAmount">$0.00</div>
         <div id="simList"></div>
         <div class="segmented" id="simKindToggle">
@@ -331,6 +340,10 @@
       </label>
       <label>Fecha
         <input required id="movDate" type="date">
+      </label>
+      <label class="row-toggle">
+        <span>Ya pasó<br><span class="hint-small">Apagalo si todavía no lo pagás/cobrás — no descuenta de "Te queda", pero sí se ve en Ingresos/Gastos del mes</span></span>
+        <label class="switch"><input type="checkbox" id="movSettled" checked><span></span></label>
       </label>
       <div class="field-group" id="movAccountWrap">
         <div class="field-label">Cuenta</div>
@@ -459,7 +472,7 @@
     const STORAGE_KEY = 'controlGastosData';
 
     function freshState() {
-      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [] };
+      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null };
     }
 
     function load() {
@@ -503,7 +516,8 @@
           goals: parsed.goals || [],
           archive: parsed.archive || [],
           currency: parsed.currency || 'USD',
-          simItems: parsed.simItems || []
+          simItems: parsed.simItems || [],
+          simBase: (parsed.simBase !== undefined) ? parsed.simBase : null
         };
       } catch {
         return freshState();
@@ -591,8 +605,14 @@
     function simTotal() {
       return (state.simItems || []).reduce((s, x) => s + (x.kind === 'ingreso' ? x.amount : -x.amount), 0);
     }
+    function simBase() {
+      return (state.simBase !== null && state.simBase !== undefined) ? state.simBase : totalAccountBalances();
+    }
     function renderSimulator() {
-      const total = totalAccountBalances() + simTotal();
+      const base = simBase();
+      document.getElementById('simBaseInput').value = base.toFixed(2);
+
+      const total = base + simTotal();
       const amountEl = document.getElementById('simAmount');
       amountEl.textContent = money(total);
       amountEl.className = 'hero-amount sim-total ' + (total < 0 ? 'level-over' : 'level-ok');
@@ -636,6 +656,17 @@
     });
     document.getElementById('btnClearSim').addEventListener('click', () => {
       state.simItems = [];
+      save();
+      renderSimulator();
+    });
+    document.getElementById('simBaseInput').addEventListener('change', e => {
+      const value = parseAmount(e.target.value);
+      state.simBase = isNaN(value) ? null : value;
+      save();
+      renderSimulator();
+    });
+    document.getElementById('btnResetSimBase').addEventListener('click', () => {
+      state.simBase = null;
       save();
       renderSimulator();
     });
@@ -844,13 +875,15 @@
     function renderMovementRow(m) {
       const sign = m.kind === 'ingreso' ? '+' : m.kind === 'transferencia' ? '' : '−';
       const signClass = m.kind === 'ingreso' ? 'sign-in' : '';
+      const pending = m.settled === false;
+      const badge = pending ? '<span class="pending-badge">Pendiente</span>' : '';
       return `
         <div class="list-row">
           <div class="row-main editable" data-action="edit-movement" data-id="${m.id}">
-            <div>${escapeHtml(m.name)}</div>
+            <div>${escapeHtml(m.name)}${badge}</div>
             <div class="row-sub">${movementSubLabel(m)}</div>
           </div>
-          <div class="row-amount ${signClass}">${sign}${money(m.amount)}</div>
+          <div class="row-amount ${signClass} ${pending ? 'pending' : ''}">${sign}${money(m.amount)}</div>
           <button class="row-delete" data-action="delete-movement" data-id="${m.id}" aria-label="Eliminar">✕</button>
         </div>`;
     }
@@ -1000,6 +1033,7 @@
       document.getElementById('movName').value = existing ? existing.name : '';
       document.getElementById('movAmount').value = existing ? String(existing.amount) : '';
       document.getElementById('movDate').value = existing ? existing.date : todayISO();
+      document.getElementById('movSettled').checked = existing ? existing.settled !== false : true;
       populateCategoryChips();
       populateAccountChips();
       populateFromChips();
@@ -1022,6 +1056,7 @@
       movement.amount = amount;
       movement.kind = movKind;
       movement.date = date;
+      movement.settled = document.getElementById('movSettled').checked;
       if (movKind === 'transferencia') {
         movement.fromAccountId = movFromAccountId;
         movement.toAccountId = movToAccountId;
