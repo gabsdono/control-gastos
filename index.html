@@ -845,23 +845,36 @@
 
     // Cada selector excluye la cuenta elegida en el otro, así nunca se puede armar
     // una transferencia de una cuenta a sí misma (eso quedaba guardado sin avisar nada).
+    // Las dos listas muestran todas las cuentas (con solo 2 cuentas, excluir la del otro
+    // lado dejaba una sin opción para elegirla nunca). Si tocás la que ya está del otro
+    // lado, se intercambian en vez de quedar iguales.
     function populateFromChips() {
       const wrap = document.getElementById('movFromChips');
-      wrap.innerHTML = state.accounts.filter(a => a.id !== movToAccountId)
+      wrap.innerHTML = state.accounts
         .map(a => `<button type="button" class="chip ${movFromAccountId === a.id ? 'active' : ''}" data-acc="${a.id}">${escapeHtml(a.name)}</button>`).join('');
     }
     function populateToChips() {
       const wrap = document.getElementById('movToChips');
-      wrap.innerHTML = state.accounts.filter(a => a.id !== movFromAccountId)
+      wrap.innerHTML = state.accounts
         .map(a => `<button type="button" class="chip ${movToAccountId === a.id ? 'active' : ''}" data-acc="${a.id}">${escapeHtml(a.name)}</button>`).join('');
     }
     document.getElementById('movFromChips').addEventListener('click', e => {
       const chip = e.target.closest('.chip[data-acc]');
-      if (chip) { movFromAccountId = chip.dataset.acc; populateFromChips(); populateToChips(); }
+      if (!chip) return;
+      const picked = chip.dataset.acc;
+      if (picked === movToAccountId) movToAccountId = movFromAccountId;
+      movFromAccountId = picked;
+      populateFromChips();
+      populateToChips();
     });
     document.getElementById('movToChips').addEventListener('click', e => {
       const chip = e.target.closest('.chip[data-acc]');
-      if (chip) { movToAccountId = chip.dataset.acc; populateFromChips(); populateToChips(); }
+      if (!chip) return;
+      const picked = chip.dataset.acc;
+      if (picked === movFromAccountId) movFromAccountId = movToAccountId;
+      movToAccountId = picked;
+      populateFromChips();
+      populateToChips();
     });
 
     function applyMovementKindVisibility() {
