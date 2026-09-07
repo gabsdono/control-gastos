@@ -133,8 +133,7 @@
   .switch span::before { content: ''; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform .15s; }
   .switch input:checked + span { background: var(--ok); border-color: var(--ok); }
   .switch input:checked + span::before { transform: translateX(18px); }
-  .pending-badge { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; color: var(--muted); background: var(--surface-2); padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
-  .row-amount.pending { opacity: 0.55; }
+  .sim-total { font-size: 32px; }
   .field-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 
   .goal-card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
@@ -229,10 +228,21 @@
         <div><div class="stat-label">Gastos</div><div class="stat-value" id="sumGastos">$0.00</div></div>
       </div>
       <div class="card">
-        <h2>Proyección del mes</h2>
-        <div class="hero-label" style="margin-top:0;">Con esto arrancarías el próximo mes</div>
-        <div class="hero-amount" id="projectedAmount" style="font-size:32px;">$0.00</div>
-        <div id="pendingBreakdown"></div>
+        <h2>Simulador</h2>
+        <p class="hint-small" style="margin:0 0 10px;">Probá números hipotéticos sin que afecten tus movimientos ni tu saldo real.</p>
+        <div class="hero-label" style="margin-top:0;">Tu saldo real + esto</div>
+        <div class="hero-amount sim-total" id="simAmount">$0.00</div>
+        <div id="simList"></div>
+        <div class="segmented" id="simKindToggle">
+          <button type="button" data-kind="ingreso" class="active">+ Suma</button>
+          <button type="button" data-kind="gasto">− Resta</button>
+        </div>
+        <div class="new-category-row">
+          <input id="simName" type="text" placeholder="Ej. Bono (opcional)">
+          <input id="simAmountInput" type="text" inputmode="decimal" placeholder="Monto">
+          <button type="button" class="btn-small" id="btnAddSim">Agregar</button>
+        </div>
+        <button type="button" class="btn-small" id="btnClearSim" style="margin-top:10px;">Limpiar simulación</button>
       </div>
       <div class="card">
         <h2>Próximos pagos</h2>
@@ -321,10 +331,6 @@
       </label>
       <label>Fecha
         <input required id="movDate" type="date">
-      </label>
-      <label class="row-toggle">
-        <span>Ya pasó<br><span class="hint-small">Apagalo si todavía no lo pagás/cobrás — no descuenta de "Te queda", pero sí se ve en Ingresos/Gastos del mes</span></span>
-        <label class="switch"><input type="checkbox" id="movSettled" checked><span></span></label>
       </label>
       <div class="field-group" id="movAccountWrap">
         <div class="field-label">Cuenta</div>
@@ -453,7 +459,7 @@
     const STORAGE_KEY = 'controlGastosData';
 
     function freshState() {
-      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD' };
+      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [] };
     }
 
     function load() {
@@ -478,6 +484,11 @@
                 dueDay: (m.dueDay !== null && m.dueDay !== undefined) ? m.dueDay : 1
               });
             }
+          } else if (m.kind === 'transferencia') {
+            movements.push({
+              id: m.id, name: m.name, amount: m.amount, kind: m.kind, date: m.date,
+              fromAccountId: m.fromAccountId || null, toAccountId: m.toAccountId || null
+            });
           } else {
             movements.push({
               id: m.id, name: m.name, amount: m.amount, kind: m.kind, date: m.date,
@@ -491,7 +502,8 @@
           movements, reminders, accounts,
           goals: parsed.goals || [],
           archive: parsed.archive || [],
-          currency: parsed.currency || 'USD'
+          currency: parsed.currency || 'USD',
+          simItems: parsed.simItems || []
         };
       } catch {
         return freshState();
@@ -574,48 +586,59 @@
     function totalAccountBalances() {
       return state.accounts.reduce((s, a) => s + accountBalance(a, state.movements), 0);
     }
-    // Saldo real + lo pendiente (ingresos/gastos que anotaste pero todavía no pasan).
-    function projectedBalance() {
-      const pendingDelta = state.movements
-        .filter(m => m.settled === false)
-        .reduce((s, m) => {
-          if (m.kind === 'ingreso') return s + m.amount;
-          if (m.kind === 'gasto') return s - m.amount;
-          return s;
-        }, 0);
-      return totalAccountBalances() + pendingDelta;
+    // ---------- Simulador (nunca toca movimientos, cuentas ni totales reales) ----------
+    let simKind = 'ingreso';
+    function simTotal() {
+      return (state.simItems || []).reduce((s, x) => s + (x.kind === 'ingreso' ? x.amount : -x.amount), 0);
     }
+    function renderSimulator() {
+      const total = totalAccountBalances() + simTotal();
+      const amountEl = document.getElementById('simAmount');
+      amountEl.textContent = money(total);
+      amountEl.className = 'hero-amount sim-total ' + (total < 0 ? 'level-over' : 'level-ok');
 
-    function pendingMovements() {
-      return state.movements.filter(m => m.settled === false).slice().sort((a, b) => a.date.localeCompare(b.date));
+      const items = state.simItems || [];
+      document.getElementById('simList').innerHTML = items.map(x => {
+        const sign = x.kind === 'ingreso' ? '+' : '−';
+        const signClass = x.kind === 'ingreso' ? 'sign-in' : '';
+        return `
+          <div class="list-row">
+            <div class="row-main"><div>${escapeHtml(x.name || (x.kind === 'ingreso' ? 'Ingreso' : 'Gasto'))}</div></div>
+            <div class="row-amount ${signClass}">${sign}${money(x.amount)}</div>
+            <button class="row-delete" data-action="delete-sim" data-id="${x.id}" aria-label="Eliminar">✕</button>
+          </div>`;
+      }).join('');
     }
-
-    function renderProjection() {
-      const proyectado = projectedBalance();
-      const amountEl = document.getElementById('projectedAmount');
-      amountEl.textContent = money(proyectado);
-      amountEl.className = 'hero-amount ' + (proyectado < 0 ? 'level-over' : 'level-ok');
-
-      const pending = pendingMovements();
-      const list = document.getElementById('pendingBreakdown');
-      if (pending.length === 0) {
-        list.innerHTML = `<p class="hint-small" style="margin-top:10px;">Es igual a tu saldo real: no tenés movimientos pendientes.</p>`;
-        return;
-      }
-      list.innerHTML = `<div class="section-label" style="margin-top:10px;">Todavía pendiente</div>` +
-        pending.map(m => {
-          const sign = m.kind === 'ingreso' ? '+' : '−';
-          const signClass = m.kind === 'ingreso' ? 'sign-in' : '';
-          return `
-            <div class="list-row">
-              <div class="row-main editable" data-action="edit-movement" data-id="${m.id}">
-                <div>${escapeHtml(m.name)}</div>
-                <div class="row-sub">${formatDate(m.date)}</div>
-              </div>
-              <div class="row-amount ${signClass}">${sign}${money(m.amount)}</div>
-            </div>`;
-        }).join('');
-    }
+    document.getElementById('simKindToggle').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-kind]');
+      if (!btn) return;
+      simKind = btn.dataset.kind;
+      document.querySelectorAll('#simKindToggle button').forEach(b => b.classList.toggle('active', b === btn));
+    });
+    document.getElementById('btnAddSim').addEventListener('click', () => {
+      const nameInput = document.getElementById('simName');
+      const amountInput = document.getElementById('simAmountInput');
+      const amount = parseAmount(amountInput.value);
+      if (isNaN(amount) || amount <= 0) return;
+      state.simItems = state.simItems || [];
+      state.simItems.push({ id: uid(), name: nameInput.value.trim(), amount, kind: simKind });
+      save();
+      nameInput.value = '';
+      amountInput.value = '';
+      renderSimulator();
+    });
+    document.getElementById('simList').addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="delete-sim"]');
+      if (!btn) return;
+      state.simItems = (state.simItems || []).filter(x => x.id !== btn.dataset.id);
+      save();
+      renderSimulator();
+    });
+    document.getElementById('btnClearSim').addEventListener('click', () => {
+      state.simItems = [];
+      save();
+      renderSimulator();
+    });
 
     function renderAll() {
       renderDashboard();
@@ -642,7 +665,7 @@
       heroEl.textContent = money(cuentas);
       heroEl.className = 'hero-amount ' + (cuentas < 0 ? 'level-over' : 'level-ok');
 
-      renderProjection();
+      renderSimulator();
       renderHeroAccounts();
 
       document.getElementById('sumIngresos').textContent = money(totalIngresosMes());
@@ -758,13 +781,6 @@
       renderLineChart();
     });
 
-    document.getElementById('pendingBreakdown').addEventListener('click', e => {
-      const edit = e.target.closest('[data-action="edit-movement"]');
-      if (!edit) return;
-      const m = state.movements.find(x => x.id === edit.dataset.id);
-      if (m) openMovementDialog(m);
-    });
-
     // ---------- Recordatorios ----------
     function populateReminderDueDayOptions() {
       const sel = document.getElementById('reminderDueDay');
@@ -828,15 +844,13 @@
     function renderMovementRow(m) {
       const sign = m.kind === 'ingreso' ? '+' : m.kind === 'transferencia' ? '' : '−';
       const signClass = m.kind === 'ingreso' ? 'sign-in' : '';
-      const pending = m.settled === false;
-      const badge = pending ? '<span class="pending-badge">Pendiente</span>' : '';
       return `
         <div class="list-row">
           <div class="row-main editable" data-action="edit-movement" data-id="${m.id}">
-            <div>${escapeHtml(m.name)}${badge}</div>
+            <div>${escapeHtml(m.name)}</div>
             <div class="row-sub">${movementSubLabel(m)}</div>
           </div>
-          <div class="row-amount ${signClass} ${pending ? 'pending' : ''}">${sign}${money(m.amount)}</div>
+          <div class="row-amount ${signClass}">${sign}${money(m.amount)}</div>
           <button class="row-delete" data-action="delete-movement" data-id="${m.id}" aria-label="Eliminar">✕</button>
         </div>`;
     }
@@ -986,7 +1000,6 @@
       document.getElementById('movName').value = existing ? existing.name : '';
       document.getElementById('movAmount').value = existing ? String(existing.amount) : '';
       document.getElementById('movDate').value = existing ? existing.date : todayISO();
-      document.getElementById('movSettled').checked = existing ? existing.settled !== false : true;
       populateCategoryChips();
       populateAccountChips();
       populateFromChips();
@@ -1009,7 +1022,6 @@
       movement.amount = amount;
       movement.kind = movKind;
       movement.date = date;
-      movement.settled = document.getElementById('movSettled').checked;
       if (movKind === 'transferencia') {
         movement.fromAccountId = movFromAccountId;
         movement.toAccountId = movToAccountId;
