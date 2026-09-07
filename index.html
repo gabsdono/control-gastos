@@ -813,7 +813,13 @@
     function renderMovements() {
       document.querySelectorAll('#movementFilters button').forEach(b => b.classList.toggle('active', b.dataset.filter === movementFilter));
       const matches = m => movementFilter === 'todos' || m.kind === movementFilter;
-      const items = state.movements.filter(matches).slice().sort((a, b) => b.date.localeCompare(a.date));
+      // Por fecha (más nueva primero); mismo día, por orden en que los ingresaste
+      // (el más reciente ingresado arriba, el primero que anotaste abajo).
+      const items = state.movements
+        .map((m, i) => ({ m, i }))
+        .filter(x => matches(x.m))
+        .sort((a, b) => b.m.date.localeCompare(a.m.date) || b.i - a.i)
+        .map(x => x.m);
       const list = document.getElementById('movementList');
       if (items.length === 0) { list.innerHTML = emptyMsg('Sin movimientos todavía. Tocá + para agregar un ingreso o un gasto.'); return; }
 

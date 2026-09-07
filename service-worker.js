@@ -1,4 +1,4 @@
-const CACHE = 'gastos-v28';
+const CACHE = 'gastos-v29';
 const ASSETS = ['./', './index.html', './logic.js', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
