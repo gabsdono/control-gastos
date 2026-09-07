@@ -222,12 +222,17 @@
         <div class="hero-eyebrow">Este mes</div>
         <div class="hero-label">Te queda</div>
         <div class="hero-amount" id="heroAmount">$0.00</div>
-        <div class="hint-small" id="heroProjected" style="margin-top:6px;"></div>
         <div class="hero-accounts" id="heroAccounts"></div>
       </div>
       <div class="stat-pair">
         <div><div class="stat-label">Ingresos</div><div class="stat-value" id="sumIngresos">$0.00</div></div>
         <div><div class="stat-label">Gastos</div><div class="stat-value" id="sumGastos">$0.00</div></div>
+      </div>
+      <div class="card">
+        <h2>Proyección del mes</h2>
+        <div class="hero-label" style="margin-top:0;">Con esto arrancarías el próximo mes</div>
+        <div class="hero-amount" id="projectedAmount" style="font-size:32px;">$0.00</div>
+        <div id="pendingBreakdown"></div>
       </div>
       <div class="card">
         <h2>Próximos pagos</h2>
@@ -581,6 +586,37 @@
       return totalAccountBalances() + pendingDelta;
     }
 
+    function pendingMovements() {
+      return state.movements.filter(m => m.settled === false).slice().sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function renderProjection() {
+      const proyectado = projectedBalance();
+      const amountEl = document.getElementById('projectedAmount');
+      amountEl.textContent = money(proyectado);
+      amountEl.className = 'hero-amount ' + (proyectado < 0 ? 'level-over' : 'level-ok');
+
+      const pending = pendingMovements();
+      const list = document.getElementById('pendingBreakdown');
+      if (pending.length === 0) {
+        list.innerHTML = `<p class="hint-small" style="margin-top:10px;">Es igual a tu saldo real: no tenés movimientos pendientes.</p>`;
+        return;
+      }
+      list.innerHTML = `<div class="section-label" style="margin-top:10px;">Todavía pendiente</div>` +
+        pending.map(m => {
+          const sign = m.kind === 'ingreso' ? '+' : '−';
+          const signClass = m.kind === 'ingreso' ? 'sign-in' : '';
+          return `
+            <div class="list-row">
+              <div class="row-main editable" data-action="edit-movement" data-id="${m.id}">
+                <div>${escapeHtml(m.name)}</div>
+                <div class="row-sub">${formatDate(m.date)}</div>
+              </div>
+              <div class="row-amount ${signClass}">${sign}${money(m.amount)}</div>
+            </div>`;
+        }).join('');
+    }
+
     function renderAll() {
       renderDashboard();
       renderMovements();
@@ -606,12 +642,7 @@
       heroEl.textContent = money(cuentas);
       heroEl.className = 'hero-amount ' + (cuentas < 0 ? 'level-over' : 'level-ok');
 
-      const proyectado = projectedBalance();
-      const projectedEl = document.getElementById('heroProjected');
-      projectedEl.textContent = Math.abs(proyectado - cuentas) > 0.005
-        ? `Proyectado (con lo pendiente): ${money(proyectado)}`
-        : '';
-
+      renderProjection();
       renderHeroAccounts();
 
       document.getElementById('sumIngresos').textContent = money(totalIngresosMes());
@@ -725,6 +756,13 @@
       save();
       renderArchive();
       renderLineChart();
+    });
+
+    document.getElementById('pendingBreakdown').addEventListener('click', e => {
+      const edit = e.target.closest('[data-action="edit-movement"]');
+      if (!edit) return;
+      const m = state.movements.find(x => x.id === edit.dataset.id);
+      if (m) openMovementDialog(m);
     });
 
     // ---------- Recordatorios ----------
