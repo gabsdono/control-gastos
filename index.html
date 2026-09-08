@@ -262,6 +262,8 @@
       <div class="card">
         <h2>Categorías</h2>
         <div id="categoryProgress"></div>
+        <div class="hint-small" id="categoryResetHint" style="margin-top:8px;"></div>
+        <button type="button" class="btn-small" id="btnResetCategories" style="margin-top:10px;">Reiniciar categorías desde hoy</button>
       </div>
       <div class="card" id="archiveCard" style="display:none;">
         <h2>Meses anteriores</h2>
@@ -473,7 +475,7 @@
     const STORAGE_KEY = 'controlGastosData';
 
     function freshState() {
-      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null };
+      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null, categoryResetAt: null };
     }
 
     function load() {
@@ -512,7 +514,8 @@
           archive: parsed.archive || [],
           currency: parsed.currency || 'USD',
           simItems: parsed.simItems || [],
-          simBase: (parsed.simBase !== undefined) ? parsed.simBase : null
+          simBase: (parsed.simBase !== undefined) ? parsed.simBase : null,
+          categoryResetAt: parsed.categoryResetAt || null
         };
       } catch {
         return freshState();
@@ -590,7 +593,10 @@
     function totalIngresosMes() { return thisMonthMovements().filter(m => m.kind === 'ingreso').reduce((s, m) => s + m.amount, 0); }
     function totalGastosMes() { return thisMonthMovements().filter(m => m.kind === 'gasto').reduce((s, m) => s + m.amount, 0); }
     function categorySpentMes(catId) {
-      return thisMonthMovements().filter(m => m.kind === 'gasto' && m.categoryId === catId).reduce((s, m) => s + m.amount, 0);
+      const periodStart = categoryPeriodStart(state.categoryResetAt, new Date());
+      return state.movements
+        .filter(m => m.kind === 'gasto' && m.categoryId === catId && m.date >= periodStart)
+        .reduce((s, m) => s + m.amount, 0);
     }
     function totalAccountBalances() {
       return state.accounts.reduce((s, a) => s + accountBalance(a, state.movements), 0);
@@ -737,6 +743,13 @@
             </div>`;
         }).join('');
       }
+
+      const now = new Date();
+      const monthStartISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      const periodStart = categoryPeriodStart(state.categoryResetAt, now);
+      document.getElementById('categoryResetHint').textContent = periodStart !== monthStartISO
+        ? `Contando desde el ${formatDate(periodStart)}`
+        : '';
     }
 
     function renderUpcoming() {
@@ -799,6 +812,13 @@
     }
 
     document.getElementById('btnCloseMonth').addEventListener('click', saveMonthSnapshot);
+
+    // No borra movimientos: solo hace que "gastado" por categoría cuente desde hoy.
+    document.getElementById('btnResetCategories').addEventListener('click', () => {
+      state.categoryResetAt = todayISO();
+      save();
+      renderAll();
+    });
 
     document.getElementById('heroAccounts').addEventListener('click', e => {
       const btn = e.target.closest('[data-action="adjust-account"]');
@@ -1214,8 +1234,9 @@
     function categoryChartData() {
       const known = state.categories.map(cat => ({ name: cat.name, color: categoryColor(cat), spent: categorySpentMes(cat.id) }));
       const knownIds = new Set(state.categories.map(c => c.id));
-      const otherSpent = thisMonthMovements()
-        .filter(m => m.kind === 'gasto' && (!m.categoryId || !knownIds.has(m.categoryId)))
+      const periodStart = categoryPeriodStart(state.categoryResetAt, new Date());
+      const otherSpent = state.movements
+        .filter(m => m.kind === 'gasto' && m.date >= periodStart && (!m.categoryId || !knownIds.has(m.categoryId)))
         .reduce((s, m) => s + m.amount, 0);
       if (otherSpent > 0) known.push({ name: 'Varios', color: OTHER_COLOR, spent: otherSpent });
       return known.filter(x => x.spent > 0).sort((a, b) => b.spent - a.spent);

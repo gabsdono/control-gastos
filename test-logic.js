@@ -1,6 +1,7 @@
 const assert = require('assert');
 const {
-  isSameMonth, goalPaid, goalRemaining, goalPercent, nextReminderDate, accountBalance, startOfWeek
+  isSameMonth, goalPaid, goalRemaining, goalPercent, nextReminderDate, accountBalance, startOfWeek,
+  categoryPeriodStart
 } = require('./logic.js');
 
 // isSameMonth (timezone-safe)
@@ -77,5 +78,11 @@ assert.deepStrictEqual(
   [startOfWeek(new Date(2026, 8, 14)).getMonth(), startOfWeek(new Date(2026, 8, 14)).getDate()],
   [8, 14], 'lunes 14 ya es la semana siguiente'
 );
+
+// categoryPeriodStart
+const sept15 = new Date(2026, 8, 15);
+assert.strictEqual(categoryPeriodStart(null, sept15), '2026-09-01', 'sin reinicio, cuenta desde el 1 del mes');
+assert.strictEqual(categoryPeriodStart('2026-09-10', sept15), '2026-09-10', 'con reinicio este mes, cuenta desde ahí');
+assert.strictEqual(categoryPeriodStart('2026-08-20', sept15), '2026-09-01', 'un reinicio de un mes anterior ya no aplica');
 
 console.log('OK: logic.js pasó todos los checks');

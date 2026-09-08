@@ -47,6 +47,17 @@ function nextReminderDate(dueDay, today) {
   return d;
 }
 
+// Desde qué fecha (ISO, incluida) se cuenta el gasto por categoría: normalmente el
+// día 1 del mes actual, pero si el usuario "reinició" categorías después de esa fecha,
+// se cuenta desde ese reinicio (un reinicio de un mes anterior ya no aplica).
+function categoryPeriodStart(resetAt, reference) {
+  const y = reference.getFullYear();
+  const m = String(reference.getMonth() + 1).padStart(2, '0');
+  const monthStartISO = `${y}-${m}-01`;
+  if (resetAt && resetAt > monthStartISO) return resetAt;
+  return monthStartISO;
+}
+
 // Saldo de una cuenta (efectivo, tarjeta...) = saldo inicial + todo lo que entró/salió
 // de esa cuenta. Una transferencia mueve plata entre dos cuentas propias (resta de una,
 // suma a la otra) sin ser ingreso ni gasto real, así que no toca el total combinado.
@@ -69,6 +80,6 @@ function accountBalance(account, movements) {
 if (typeof module !== 'undefined') {
   module.exports = {
     parseLocalDate, isSameMonth, goalPaid, goalRemaining, goalPercent,
-    nextReminderDate, accountBalance, startOfWeek
+    nextReminderDate, accountBalance, startOfWeek, categoryPeriodStart
   };
 }
