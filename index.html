@@ -867,6 +867,7 @@
     document.getElementById('categoryHistoryList').addEventListener('click', e => {
       const btn = e.target.closest('[data-action="delete-category-history"]');
       if (!btn) return;
+      if (!confirm('¿Borrar esta foto del historial? No se puede deshacer (tus movimientos no se tocan, solo este resumen).')) return;
       state.categoryHistory = (state.categoryHistory || []).filter(h => h.id !== btn.dataset.id);
       save();
       renderCategoryHistory();
@@ -890,6 +891,7 @@
     document.getElementById('archiveList').addEventListener('click', e => {
       const btn = e.target.closest('[data-action="delete-archive"]');
       if (!btn) return;
+      if (!confirm('¿Borrar este mes del historial? No se puede deshacer (tus movimientos no se tocan, solo este resumen).')) return;
       state.archive = state.archive.filter(a => a.id !== btn.dataset.id);
       save();
       renderArchive();
