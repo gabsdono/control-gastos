@@ -479,7 +479,7 @@
     const STORAGE_KEY = 'controlGastosData';
 
     function freshState() {
-      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null, categoryResetAt: null, categoryHistory: [] };
+      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null, categoryResetAt: null, categoryResetIds: [], categoryHistory: [] };
     }
 
     function load() {
@@ -520,6 +520,7 @@
           simItems: parsed.simItems || [],
           simBase: (parsed.simBase !== undefined) ? parsed.simBase : null,
           categoryResetAt: parsed.categoryResetAt || null,
+          categoryResetIds: parsed.categoryResetIds || [],
           categoryHistory: parsed.categoryHistory || []
         };
       } catch {
@@ -598,9 +599,9 @@
     function totalIngresosMes() { return thisMonthMovements().filter(m => m.kind === 'ingreso').reduce((s, m) => s + m.amount, 0); }
     function totalGastosMes() { return thisMonthMovements().filter(m => m.kind === 'gasto').reduce((s, m) => s + m.amount, 0); }
     function categorySpentMes(catId) {
-      const periodStart = categoryPeriodStart(state.categoryResetAt, new Date());
+      const excluded = new Set(state.categoryResetIds || []);
       return state.movements
-        .filter(m => m.kind === 'gasto' && m.categoryId === catId && m.date >= periodStart)
+        .filter(m => m.kind === 'gasto' && m.categoryId === catId && !excluded.has(m.id))
         .reduce((s, m) => s + m.amount, 0);
     }
     function totalAccountBalances() {
@@ -749,11 +750,8 @@
         }).join('');
       }
 
-      const now = new Date();
-      const monthStartISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      const periodStart = categoryPeriodStart(state.categoryResetAt, now);
-      document.getElementById('categoryResetHint').textContent = periodStart !== monthStartISO
-        ? `Contando desde el ${formatDate(periodStart)}`
+      document.getElementById('categoryResetHint').textContent = (state.categoryResetIds && state.categoryResetIds.length > 0)
+        ? `Contando desde el ${formatDate(state.categoryResetAt)}`
         : '';
 
       renderCategoryHistory();
@@ -848,14 +846,19 @@
 
     document.getElementById('btnCloseMonth').addEventListener('click', saveMonthSnapshot);
 
-    // No borra movimientos: solo hace que "gastado" por categoría cuente desde hoy.
+    // No borra movimientos: guarda el desglose actual en el historial y excluye
+    // todo lo que existe HASTA AHORA del conteo por categoría (sin importar su fecha,
+    // así algo cargado hoy mismo antes de este click no sigue contando).
     document.getElementById('btnResetCategories').addEventListener('click', () => {
-      const periodStart = categoryPeriodStart(state.categoryResetAt, new Date());
       const breakdown = categoryBreakdownNow();
       if (breakdown.length > 0) {
+        const from = state.categoryResetAt || (state.movements.length
+          ? state.movements.slice().sort((a, b) => a.date.localeCompare(b.date))[0].date
+          : todayISO());
         state.categoryHistory = state.categoryHistory || [];
-        state.categoryHistory.push({ id: uid(), from: periodStart, to: todayISO(), categorias: breakdown });
+        state.categoryHistory.push({ id: uid(), from, to: todayISO(), categorias: breakdown });
       }
+      state.categoryResetIds = state.movements.map(m => m.id);
       state.categoryResetAt = todayISO();
       save();
       renderAll();
@@ -1283,9 +1286,9 @@
     function categoryChartData() {
       const known = state.categories.map(cat => ({ name: cat.name, color: categoryColor(cat), spent: categorySpentMes(cat.id) }));
       const knownIds = new Set(state.categories.map(c => c.id));
-      const periodStart = categoryPeriodStart(state.categoryResetAt, new Date());
+      const excluded = new Set(state.categoryResetIds || []);
       const otherSpent = state.movements
-        .filter(m => m.kind === 'gasto' && m.date >= periodStart && (!m.categoryId || !knownIds.has(m.categoryId)))
+        .filter(m => m.kind === 'gasto' && !excluded.has(m.id) && (!m.categoryId || !knownIds.has(m.categoryId)))
         .reduce((s, m) => s + m.amount, 0);
       if (otherSpent > 0) known.push({ name: 'Varios', color: OTHER_COLOR, spent: otherSpent });
       return known.filter(x => x.spent > 0).sort((a, b) => b.spent - a.spent);
