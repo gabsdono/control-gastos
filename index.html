@@ -776,17 +776,20 @@
       if (history.length === 0) { card.style.display = 'none'; return; }
       card.style.display = 'block';
       document.getElementById('categoryHistoryList').innerHTML = history.slice().reverse().map(h => {
-        const total = h.categorias.reduce((s, c) => s + c.spent, 0);
         const breakdown = h.categorias
           .map(c => `<span class="cat-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}: ${money(c.spent)}`)
           .join(' · ');
+        const hasTotals = h.ingresos !== undefined || h.gastos !== undefined;
+        const totalsLine = hasTotals
+          ? `<div class="row-sub">Ingresos ${money(h.ingresos || 0)} · Gastos ${money(h.gastos || 0)}</div>`
+          : '';
         return `
           <div class="list-row">
             <div class="row-main">
               <div>${formatDate(h.from)} – ${formatDate(h.to)}</div>
+              ${totalsLine}
               <div class="row-sub">${breakdown}</div>
             </div>
-            <div class="row-amount">${money(total)}</div>
             <button class="row-delete" data-action="delete-category-history" data-id="${h.id}" aria-label="Eliminar">✕</button>
           </div>`;
       }).join('');
@@ -869,13 +872,19 @@
     // todo lo que existe HASTA AHORA del conteo por categoría (sin importar su fecha,
     // así algo cargado hoy mismo antes de este click no sigue contando).
     document.getElementById('btnResetCategories').addEventListener('click', () => {
+      // Todo lo que entró desde el corte anterior (o desde siempre, si nunca cortaste) —
+      // da igual cuántos reinicios ya hayas hecho, siempre es "lo de este período".
+      const excludedBefore = new Set(state.categoryResetIds || []);
+      const periodMovements = state.movements.filter(m => !excludedBefore.has(m.id));
       const breakdown = categoryBreakdownNow();
-      if (breakdown.length > 0) {
+      const ingresos = periodMovements.filter(m => m.kind === 'ingreso').reduce((s, m) => s + m.amount, 0);
+      const gastos = periodMovements.filter(m => m.kind === 'gasto').reduce((s, m) => s + m.amount, 0);
+      if (breakdown.length > 0 || ingresos > 0 || gastos > 0) {
         const from = state.categoryResetAt || (state.movements.length
           ? state.movements.slice().sort((a, b) => a.date.localeCompare(b.date))[0].date
           : todayISO());
         state.categoryHistory = state.categoryHistory || [];
-        state.categoryHistory.push({ id: uid(), from, to: todayISO(), categorias: breakdown });
+        state.categoryHistory.push({ id: uid(), from, to: todayISO(), ingresos, gastos, categorias: breakdown });
       }
       state.categoryResetIds = state.movements.map(m => m.id);
       state.categoryResetAt = todayISO();
