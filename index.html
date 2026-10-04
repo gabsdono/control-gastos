@@ -265,6 +265,10 @@
         <div class="hint-small" id="categoryResetHint" style="margin-top:8px;"></div>
         <button type="button" class="btn-small" id="btnResetCategories" style="margin-top:10px;">Reiniciar categorías desde hoy</button>
       </div>
+      <div class="card" id="categoryHistoryCard" style="display:none;">
+        <h2>Historial de categorías</h2>
+        <div id="categoryHistoryList"></div>
+      </div>
       <div class="card" id="archiveCard" style="display:none;">
         <h2>Meses anteriores</h2>
         <div id="archiveList"></div>
@@ -475,7 +479,7 @@
     const STORAGE_KEY = 'controlGastosData';
 
     function freshState() {
-      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null, categoryResetAt: null };
+      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null, categoryResetAt: null, categoryHistory: [] };
     }
 
     function load() {
@@ -515,7 +519,8 @@
           currency: parsed.currency || 'USD',
           simItems: parsed.simItems || [],
           simBase: (parsed.simBase !== undefined) ? parsed.simBase : null,
-          categoryResetAt: parsed.categoryResetAt || null
+          categoryResetAt: parsed.categoryResetAt || null,
+          categoryHistory: parsed.categoryHistory || []
         };
       } catch {
         return freshState();
@@ -750,6 +755,36 @@
       document.getElementById('categoryResetHint').textContent = periodStart !== monthStartISO
         ? `Contando desde el ${formatDate(periodStart)}`
         : '';
+
+      renderCategoryHistory();
+    }
+
+    function categoryBreakdownNow() {
+      return state.categories
+        .map(c => ({ name: c.name, color: categoryColor(c), spent: categorySpentMes(c.id) }))
+        .filter(c => c.spent > 0);
+    }
+
+    function renderCategoryHistory() {
+      const card = document.getElementById('categoryHistoryCard');
+      const history = state.categoryHistory || [];
+      if (history.length === 0) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      document.getElementById('categoryHistoryList').innerHTML = history.slice().reverse().map(h => {
+        const total = h.categorias.reduce((s, c) => s + c.spent, 0);
+        const breakdown = h.categorias
+          .map(c => `<span class="cat-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}: ${money(c.spent)}`)
+          .join(' · ');
+        return `
+          <div class="list-row">
+            <div class="row-main">
+              <div>${formatDate(h.from)} – ${formatDate(h.to)}</div>
+              <div class="row-sub">${breakdown}</div>
+            </div>
+            <div class="row-amount">${money(total)}</div>
+            <button class="row-delete" data-action="delete-category-history" data-id="${h.id}" aria-label="Eliminar">✕</button>
+          </div>`;
+      }).join('');
     }
 
     function renderUpcoming() {
@@ -815,9 +850,23 @@
 
     // No borra movimientos: solo hace que "gastado" por categoría cuente desde hoy.
     document.getElementById('btnResetCategories').addEventListener('click', () => {
+      const periodStart = categoryPeriodStart(state.categoryResetAt, new Date());
+      const breakdown = categoryBreakdownNow();
+      if (breakdown.length > 0) {
+        state.categoryHistory = state.categoryHistory || [];
+        state.categoryHistory.push({ id: uid(), from: periodStart, to: todayISO(), categorias: breakdown });
+      }
       state.categoryResetAt = todayISO();
       save();
       renderAll();
+    });
+
+    document.getElementById('categoryHistoryList').addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="delete-category-history"]');
+      if (!btn) return;
+      state.categoryHistory = (state.categoryHistory || []).filter(h => h.id !== btn.dataset.id);
+      save();
+      renderCategoryHistory();
     });
 
     document.getElementById('heroAccounts').addEventListener('click', e => {
