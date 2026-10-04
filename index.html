@@ -265,7 +265,7 @@
         <div class="hint-small" id="categoryResetHint" style="margin-top:8px;"></div>
         <div style="display:flex; gap:8px; margin-top:10px;">
           <button type="button" class="btn-small" id="btnResetCategories">Reiniciar categorías desde hoy</button>
-          <button type="button" class="btn-small" id="btnUndoResetCategories" style="display:none;">Ver todo (deshacer)</button>
+          <button type="button" class="btn-small" id="btnUndoResetCategories" style="display:none;">Deshacer último reinicio</button>
         </div>
       </div>
       <div class="card" id="categoryHistoryCard" style="display:none;">
@@ -482,7 +482,7 @@
     const STORAGE_KEY = 'controlGastosData';
 
     function freshState() {
-      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null, categoryResetAt: null, categoryResetIds: [], categoryHistory: [] };
+      return { categories: [], movements: [], reminders: [], accounts: [], goals: [], archive: [], currency: 'USD', simItems: [], simBase: null, categoryResetAt: null, categoryResetIds: [], categoryResetIdsPrevious: null, categoryResetAtPrevious: null, categoryHistory: [] };
     }
 
     function load() {
@@ -524,6 +524,8 @@
           simBase: (parsed.simBase !== undefined) ? parsed.simBase : null,
           categoryResetAt: parsed.categoryResetAt || null,
           categoryResetIds: parsed.categoryResetIds || [],
+          categoryResetIdsPrevious: parsed.categoryResetIdsPrevious || null,
+          categoryResetAtPrevious: parsed.categoryResetAtPrevious || null,
           categoryHistory: parsed.categoryHistory || []
         };
       } catch {
@@ -759,7 +761,8 @@
       document.getElementById('categoryResetHint').textContent = resetActive
         ? `Contando desde el ${formatDate(state.categoryResetAt)}`
         : '';
-      document.getElementById('btnUndoResetCategories').style.display = resetActive ? 'inline-block' : 'none';
+      const canUndo = resetActive && state.categoryResetIdsPrevious !== null && state.categoryResetIdsPrevious !== undefined;
+      document.getElementById('btnUndoResetCategories').style.display = canUndo ? 'inline-block' : 'none';
 
       renderCategoryHistory();
     }
@@ -886,16 +889,20 @@
         state.categoryHistory = state.categoryHistory || [];
         state.categoryHistory.push({ id: uid(), from, to: todayISO(), ingresos, gastos, categorias: breakdown });
       }
+      state.categoryResetIdsPrevious = state.categoryResetIds; // para poder deshacer solo este paso
+      state.categoryResetAtPrevious = state.categoryResetAt;
       state.categoryResetIds = state.movements.map(m => m.id);
       state.categoryResetAt = todayISO();
       save();
       renderAll();
     });
 
-    // Vuelve a contar todo el historial (sin tocar las fotos guardadas).
+    // Deshace SOLO el último reinicio (vuelve al corte anterior), no a todo el historial acumulado.
     document.getElementById('btnUndoResetCategories').addEventListener('click', () => {
-      state.categoryResetIds = [];
-      state.categoryResetAt = null;
+      state.categoryResetIds = state.categoryResetIdsPrevious || [];
+      state.categoryResetAt = state.categoryResetIds.length > 0 ? (state.categoryResetAtPrevious || null) : null;
+      state.categoryResetIdsPrevious = null;
+      state.categoryResetAtPrevious = null;
       save();
       renderAll();
     });
