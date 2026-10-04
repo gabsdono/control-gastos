@@ -736,7 +736,9 @@
       if (state.categories.length === 0) {
         catList.innerHTML = emptyMsg('Todavía no hay categorías. Agregá una desde Ajustes.');
       } else {
-        const catSpends = state.categories.map(cat => ({ cat, spent: categorySpentMes(cat.id) }));
+        const catSpends = state.categories
+          .map(cat => ({ cat, spent: categorySpentMes(cat.id) }))
+          .sort((a, b) => b.spent - a.spent);
         const maxSpent = Math.max(1, ...catSpends.map(x => x.spent));
         catList.innerHTML = catSpends.map(({ cat, spent }) => {
           const hasLimit = cat.limit && cat.limit > 0;
