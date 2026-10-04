@@ -277,8 +277,8 @@
         <div id="archiveList"></div>
       </div>
       <div class="card">
-        <h2>Guardar resumen del mes</h2>
-        <p class="hint" style="margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.5;">Guarda una foto de este mes (ingresos, gastos, saldo) para verla en Gráficos. No borra nada — tus movimientos siguen ahí, y el próximo mes se calcula solo con la fecha de cada uno.</p>
+        <h2>Guardar resumen del mes anterior</h2>
+        <p class="hint" style="margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.5;">Guarda una foto del mes que ya terminó (ingresos, gastos, saldo a esa fecha) para verla en Gráficos. No borra nada — tus movimientos siguen ahí.</p>
         <button type="button" class="btn-small" id="btnCloseMonth">Guardar resumen</button>
       </div>
     </section>
@@ -832,18 +832,30 @@
     // Guarda una "foto" del mes para el historial de Gráficos. No borra nada: los
     // totales de "este mes" ya se calculan solos por fecha, así que en cuanto cambia
     // el mes del calendario, se refrescan sin necesidad de limpiar movimientos.
+    // Guarda el mes ANTERIOR completo (no "este mes"): si lo apretás recién empezado
+    // el mes actual, ese mes casi no tiene datos todavía — el que de verdad terminó
+    // y tiene todo cargado es el anterior.
     function saveMonthSnapshot() {
-      const now = new Date();
-      const label = now.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
+      const today = new Date();
+      const prevMonthRef = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const prevMonthMovs = state.movements.filter(m => isSameMonth(m.date, prevMonthRef));
+      const endOfPrevMonth = new Date(prevMonthRef.getFullYear(), prevMonthRef.getMonth() + 1, 0);
+      const endOfPrevMonthISO = `${endOfPrevMonth.getFullYear()}-${String(endOfPrevMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfPrevMonth.getDate()).padStart(2, '0')}`;
+      const movsUpToPrevMonth = state.movements.filter(m => m.date <= endOfPrevMonthISO);
+
+      const label = prevMonthRef.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
       const snapshot = {
         id: uid(),
         label: label.charAt(0).toUpperCase() + label.slice(1),
         closedAt: todayISO(),
-        ingresos: totalIngresosMes(),
-        gastos: totalGastosMes(),
-        restante: totalAccountBalances(),
+        ingresos: prevMonthMovs.filter(m => m.kind === 'ingreso').reduce((s, m) => s + m.amount, 0),
+        gastos: prevMonthMovs.filter(m => m.kind === 'gasto').reduce((s, m) => s + m.amount, 0),
+        restante: state.accounts.reduce((s, a) => s + accountBalance(a, movsUpToPrevMonth), 0),
         categorias: state.categories
-          .map(c => ({ name: c.name, color: categoryColor(c), spent: categorySpentMes(c.id) }))
+          .map(c => ({
+            name: c.name, color: categoryColor(c),
+            spent: prevMonthMovs.filter(m => m.kind === 'gasto' && m.categoryId === c.id).reduce((s, m) => s + m.amount, 0)
+          }))
           .filter(c => c.spent > 0)
       };
       state.archive.push(snapshot);
